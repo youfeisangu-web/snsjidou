@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Setting {
+  id                  Int      @id @default(1)
+  fbPageId            String?
+  fbAccessToken       String?
+  threadsUserId       String?
+  threadsAccessToken  String?
+  geminiApiKey        String?
+  imgbbApiKey         String?
+  rssUrl              String?  // RSS自動投稿用URL
+  hpUrl               String?  // HP URL (Threadsのコメントに貼る用)
+  updatedAt           DateTime @updatedAt
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  content     String
+  imagePath   String?
+  platform    String   // "facebook", "threads", or "both"
+  status      String   // "published", "failed", "scheduled", "draft"
+  scheduledAt DateTime? // 投稿予約日時
+  isRss       Boolean  @default(false) // RSSから自動生成されたか
+  fbPostId    String?  // ID returned by FB Graph API
+  threadsId   String?  // ID returned by Threads API
+  publishedAt DateTime @default(now())
+
+  insights     PostInsight[]
+}
+
+model PostInsight {
+  id           String   @id @default(cuid())
+  postId       String
+  post         Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  impressions  Int      @default(0)
+  likes        Int      @default(0)
+  comments     Int      @default(0) // replies for Threads
+  shares       Int      @default(0) // reposts/quotes for Threads
+  
+  recordedAt   DateTime @default(now())
+}
+
+model PageInsight {
+  id                String   @id @default(cuid())
+  platform          String   // "facebook" or "threads"
+  
+  followersCount    Int      @default(0)
+  totalImpressions  Int      @default(0) // Last 30 days or cumulative
+  totalEngagement   Int      @default(0) // Likes+Comments+Shares
+  
+  recordedAt        DateTime @default(now())
+}
