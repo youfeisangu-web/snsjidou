@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const assetId = params.id
+    const assetId = (await params).id
     if (!assetId) {
       return NextResponse.json({ error: 'Asset ID required' }, { status: 400 })
     }

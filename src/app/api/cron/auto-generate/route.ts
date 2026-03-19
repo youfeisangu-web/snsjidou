@@ -92,6 +92,7 @@ ${contextContext}`
             generationConfig: {
               temperature: 0.9,
               maxOutputTokens: 2000,
+              responseMimeType: "application/json"
             }
           })
         })
@@ -103,7 +104,14 @@ ${contextContext}`
         generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim()
 
         let postsArray: any[] = []
-        try { postsArray = JSON.parse(generatedText) } catch { return { profileId: profile.id, error: 'JSON Parse Error' } }
+        try { 
+          const match = generatedText.match(/\[[\s\S]*\]/)
+          if (match) generatedText = match[0]
+          postsArray = JSON.parse(generatedText) 
+        } catch { 
+          console.error(`JSON Parse Error for profile ${profile.id}. Raw text:`, generatedText);
+          return { profileId: profile.id, error: 'JSON Parse Error' } 
+        }
 
         if (!Array.isArray(postsArray) || postsArray.length === 0) {
           return { profileId: profile.id, error: 'Empty array returned' }

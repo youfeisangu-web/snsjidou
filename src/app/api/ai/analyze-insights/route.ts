@@ -3,10 +3,12 @@ import { prisma } from '@/lib/prisma'
 
 import { cookies } from 'next/headers'
 
-export async function GET() {
+export async function POST(req: Request) {
   try {
+    const { profileId } = await req.json().catch(() => ({ profileId: null }))
+    
     const cookieStore = await cookies()
-    const activeProfileId = cookieStore.get('activeProfileId')?.value
+    const activeProfileId = profileId || cookieStore.get('activeProfileId')?.value
 
     const settings = await prisma.setting.findUnique({ where: { id: 1 } })
     if (!settings || !settings.geminiApiKey) {

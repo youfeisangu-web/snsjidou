@@ -65,23 +65,36 @@ ${contextContext}`
         generationConfig: {
           temperature: 0.9,
           maxOutputTokens: 2000,
+          responseMimeType: "application/json"
         }
       })
     })
 
-    if (!res.ok) throw new Error('Gemini API Error')
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error('Gemini API Error details:', errorText)
+      throw new Error(`Gemini API Error: ${res.status} - ${errorText.substring(0,100)}`)
+    }
     
     const data = await res.json()
     let generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]'
     generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim()
 
     let postsArray: any[] = []
-    try { postsArray = JSON.parse(generatedText) } catch { return NextResponse.json({ error: 'JSON Parse Error' }, { status: 500 }) }
+    try { 
+      // Enhance robustness for finding JSON array block
+      const match = generatedText.match(/\[[\s\S]*\]/)
+      if (match) generatedText = match[0]
+      postsArray = JSON.parse(generatedText) 
+    } catch { 
+      console.error('JSON Parse Error. Raw text:', generatedText)
+      return NextResponse.json({ error: 'JSON Parse Error' }, { status: 500 }) 
+    }
 
     return NextResponse.json({ posts: postsArray })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Preview Generate Error:', error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed' }, { status: 500 })
   }
 }

@@ -44,7 +44,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <AIAssistant />
+      <AIAssistant profileId={activeProfileId} />
 
       <section>
         <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 mb-8">主要な指標 (Key Metrics)</h2>

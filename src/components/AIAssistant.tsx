@@ -4,21 +4,32 @@ import { useState } from 'react'
 import { Sparkles, BrainCircuit } from 'lucide-react'
 import { SwipeReview } from './SwipeReview'
 
-export function AIAssistant() {
+export function AIAssistant({ profileId }: { profileId?: string }) {
   const [insight, setInsight] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [previewPosts, setPreviewPosts] = useState<any[] | null>(null)
 
+  const getCurrentProfileId = () => {
+    if (profileId) return profileId;
+    const match = document.cookie.match(/activeProfileId=([^;]+)/)
+    return match ? match[1] : null;
+  }
+
   const handleAnalyze = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/ai/analyze-insights')
+      const pid = getCurrentProfileId()
+      const res = await fetch('/api/ai/analyze-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: pid }) // Assuming the route accepts it, or just generic
+      })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setInsight(data.text)
     } catch (error: any) {
-      alert('自動分析に失敗しました。SettingsでGemini APIキーが設定されているか確認してください。')
+      alert(`診断に失敗しました: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -27,19 +38,18 @@ export function AIAssistant() {
   const handleAutoGenerate = async () => {
     setGenerating(true)
     try {
-      const match = document.cookie.match(/activeProfileId=([^;]+)/)
-      const profileId = match ? match[1] : null
-
+      const pid = getCurrentProfileId()
       const res = await fetch('/api/ai/preview-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId, targetDays: 5 }) // 5 posts for Swiping
+        body: JSON.stringify({ profileId: pid, targetDays: 5 }) // 5 posts for Swiping
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
+      if (!data.posts || data.posts.length === 0) throw new Error('投稿が生成されませんでした (JSON Parse Error)')
       setPreviewPosts(data.posts)
     } catch (error: any) {
-      alert('自動生成に失敗しました。SettingsでGemini APIキーが設定されているか確認してください。')
+      alert(`自動生成に失敗しました: ${error.message}`)
     } finally {
       setGenerating(false)
     }
@@ -49,8 +59,7 @@ export function AIAssistant() {
     setPreviewPosts(null)
     setGenerating(true)
     try {
-       const match = document.cookie.match(/activeProfileId=([^;]+)/)
-       const profileId = match ? match[1] : null
+       const pid = getCurrentProfileId()
 
        const res = await fetch('/api/ai/save-swiped-posts', {
          method: 'POST',
