@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { Sparkles, BrainCircuit } from 'lucide-react'
+import { SwipeReview } from './SwipeReview'
 
 export function AIAssistant() {
   const [insight, setInsight] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [previewPosts, setPreviewPosts] = useState<any[] | null>(null)
 
   const handleAnalyze = async () => {
     setLoading(true)
@@ -25,18 +27,43 @@ export function AIAssistant() {
   const handleAutoGenerate = async () => {
     setGenerating(true)
     try {
-      const res = await fetch('/api/cron/auto-generate', {
+      const match = document.cookie.match(/activeProfileId=([^;]+)/)
+      const profileId = match ? match[1] : null
+
+      const res = await fetch('/api/ai/preview-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}'
+        body: JSON.stringify({ profileId, targetDays: 5 }) // 5 posts for Swiping
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      alert(`${data.count}件の投稿をAIが完全自動で考え、予約しました！「カレンダー」をご確認ください。`)
+      setPreviewPosts(data.posts)
     } catch (error: any) {
       alert('自動生成に失敗しました。SettingsでGemini APIキーが設定されているか確認してください。')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const handleSwipeFinish = async (approved: any[], rejected: any[]) => {
+    setPreviewPosts(null)
+    setGenerating(true)
+    try {
+       const match = document.cookie.match(/activeProfileId=([^;]+)/)
+       const profileId = match ? match[1] : null
+
+       const res = await fetch('/api/ai/save-swiped-posts', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ profileId, approvedPosts: approved, rejectedPosts: rejected })
+       })
+       const data = await res.json()
+       if (data.error) throw new Error(data.error)
+       alert(`${approved.length}件の投稿を採用して予約しました！AIがあなたの好みを学習しました。`)
+    } catch {
+       alert('保存中にエラーが発生しました。')
+    } finally {
+       setGenerating(false)
     }
   }
 
@@ -59,7 +86,7 @@ export function AIAssistant() {
             className="flex items-center justify-center gap-1.5 px-5 py-2.5 shadow-sm text-xs font-medium tracking-widest uppercase rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
           >
             <Sparkles className={`w-3.5 h-3.5 ${generating ? 'animate-pulse' : ''}`} />
-            {generating ? '全自動考案中...' : 'AIに完全お任せで作る (3日分)'}
+            {generating ? '全自動考案中...' : 'AIに完全お任せで作る (スワイプ)'}
           </button>
           
           <button
@@ -77,6 +104,10 @@ export function AIAssistant() {
         <div className="bg-white/80 p-6 rounded-xl border border-indigo-50 text-sm leading-relaxed text-gray-700 font-light whitespace-pre-wrap">
           {insight}
         </div>
+      )}
+
+      {previewPosts && (
+        <SwipeReview posts={previewPosts} onFinish={handleSwipeFinish} />
       )}
     </div>
   )

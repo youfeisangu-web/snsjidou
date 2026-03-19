@@ -1,12 +1,19 @@
 import { prisma } from '@/lib/prisma'
-import { Calendar, Clock, CheckCircle2, Facebook, AtSign, Rss } from 'lucide-react'
+import { Calendar, Clock, CheckCircle2, AtSign, Rss } from 'lucide-react'
 import { format, isFuture, isPast } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { CalendarView } from '@/components/CalendarView'
+
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CalendarPage() {
+  const cookieStore = await cookies()
+  const activeProfileId = cookieStore.get('activeProfileId')?.value
+
   const posts = await prisma.post.findMany({
+    where: activeProfileId ? { profileId: activeProfileId } : {},
     orderBy: {
       publishedAt: 'desc'
     }
@@ -25,7 +32,9 @@ export default async function CalendarPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <CalendarView posts={posts} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-16">
         <section className="space-y-8">
           <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary-400" />
@@ -46,8 +55,7 @@ export default async function CalendarPage() {
                     </span>
                     <div className="flex items-center gap-2">
                       {post.isRss && <div title="RSS自動生成"><Rss className="w-3.5 h-3.5 text-orange-400" /></div>}
-                      {(post.platform === 'facebook' || post.platform === 'both') && <Facebook className="w-3.5 h-3.5 text-gray-400" />}
-                      {(post.platform === 'threads' || post.platform === 'both') && <AtSign className="w-3.5 h-3.5 text-gray-400" />}
+                      <AtSign className="w-3.5 h-3.5 text-gray-400" />
                     </div>
                   </div>
                   <p className="text-sm text-gray-800 font-light leading-relaxed whitespace-pre-wrap line-clamp-3">
@@ -79,8 +87,7 @@ export default async function CalendarPage() {
                     <div className="flex items-center gap-2">
                       {post.status === 'failed' && <span className="text-red-500 font-medium">失敗</span>}
                       {post.isRss && <div title="RSS自動生成"><Rss className="w-3.5 h-3.5 text-orange-400" /></div>}
-                      {(post.platform === 'facebook' || post.platform === 'both') && <Facebook className="w-3.5 h-3.5" />}
-                      {(post.platform === 'threads' || post.platform === 'both') && <AtSign className="w-3.5 h-3.5" />}
+                      <AtSign className="w-3.5 h-3.5" />
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 font-light leading-relaxed whitespace-pre-wrap line-clamp-2 opacity-80">

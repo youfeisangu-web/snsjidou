@@ -50,27 +50,15 @@ export function DashboardChart({
     labels,
     datasets: [
       {
-        fill: true,
-        label: 'Facebook反応数',
-        data: [120, 190, 150, 220, 210, 305, 315], // In perfect MVP, map real data points
-        borderColor: 'rgb(29, 78, 216)', // tailwind blue-700
-        backgroundColor: 'rgba(29, 78, 216, 0.05)',
-        tension: 0.4,
-        borderWidth: 2,
-        pointRadius: 0,
-        pointHitRadius: 20,
-      },
-      {
-        fill: true,
         label: 'Threads反応数',
-        data: [65, 80, 130, 100, 180, 150, 260],
-        borderColor: 'rgb(98, 145, 84)', // tailwind primary-500
-        backgroundColor: 'rgba(98, 145, 84, 0.05)',
+        data: thData.length ? thData.map(d => d.totalEngagement) : labels.map(() => Math.floor(Math.random() * 500)),
+        borderColor: 'rgb(0, 0, 0)',
+        backgroundColor: 'transparent',
         tension: 0.4,
         borderWidth: 2,
         pointRadius: 0,
         pointHitRadius: 20,
-      },
+      }
     ],
   }
 

@@ -13,28 +13,69 @@ datasource db {
 
 model Setting {
   id                  Int      @id @default(1)
-  fbPageId            String?
-  fbAccessToken       String?
   threadsUserId       String?
   threadsAccessToken  String?
   geminiApiKey        String?
   imgbbApiKey         String?
   rssUrl              String?  // RSS自動投稿用URL
   hpUrl               String?  // HP URL (Threadsのコメントに貼る用)
+  aiPrompt            String?  // AIのサービス情報・指示プロンプト
+  implementedFeatures String?  // 実装済みの機能
+  upcomingFeatures    String?  // 今後の実装予定機能
+  relatedTopics       String?  // 関連項目・リサーチテーマ
   updatedAt           DateTime @updatedAt
 }
+
+model Profile {
+  id                  String   @id @default(cuid())
+  name                String   @default("My Account")
+  threadsUserId       String?
+  threadsAccessToken  String?
+  rssUrl              String?  
+  hpUrl               String?  
+  aiPrompt            String?  
+  aiPreferenceRules   String?  @default("")
+  successFactors      String?  @default("")
+  implementedFeatures String?  
+  upcomingFeatures    String?  
+  relatedTopics       String?  
+  postCountPerDay     Int      @default(3)
+  postIntervalType    String   @default("uniform") // "uniform", "random"
+  useImageWarehouse   Boolean  @default(false)
+  autoCreateDeficientPosts Boolean @default(true)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  posts               Post[]
+  insights            PageInsight[]
+  images              ImageAsset[]
+}
+
+model ImageAsset {
+  id          String   @id @default(cuid())
+  url         String
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  usedCount   Int      @default(0)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+}
+
 
 model Post {
   id          String   @id @default(cuid())
   content     String
-  imagePath   String?
-  platform    String   // "facebook", "threads", or "both"
-  status      String   // "published", "failed", "scheduled", "draft"
-  scheduledAt DateTime? // 投稿予約日時
+  imageUrl    String?  // GCS or ImgBB image URL
+  platform    String   @default("threads") // 'threads'
+  status      String   @default("draft") // 'draft', 'scheduled', 'published', 'failed'
+  scheduledAt DateTime?
   isRss       Boolean  @default(false) // RSSから自動生成されたか
-  fbPostId    String?  // ID returned by FB Graph API
-  threadsId   String?  // ID returned by Threads API
-  publishedAt DateTime @default(now())
+  threadsId   String?  // Threads Post ID
+  publishedAt DateTime?
+
+  profileId   String?
+  profile     Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
   insights     PostInsight[]
 }
@@ -54,11 +95,15 @@ model PostInsight {
 
 model PageInsight {
   id                String   @id @default(cuid())
-  platform          String   // "facebook" or "threads"
+  platform          String   // "facebook"
   
-  followersCount    Int      @default(0)
-  totalImpressions  Int      @default(0) // Last 30 days or cumulative
-  totalEngagement   Int      @default(0) // Likes+Comments+Shares
-  
+  profileId         String?
+  profile           Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  date              DateTime // 計測日
+  followers         Int      @default(0)
+  postImpressions   Int      @default(0) // period
+  pageViews         Int      @default(0) // period
+
   recordedAt        DateTime @default(now())
 }

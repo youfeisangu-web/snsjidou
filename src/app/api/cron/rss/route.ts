@@ -31,8 +31,8 @@ export async function GET() {
     }
 
     // Generate Summary via Gemini
-    const sysPrompt = `あなたはSNS運用者です。以下のブログ/ニュース記事のタイトルと一部の内容を読み取り、Facebook/Threads向けのキャッチーな紹介文（絵文字入り、ハッシュタグ2〜3個）を作成してください。
-出力は投稿テキストのみにしてください。`
+    const sysPrompt = `あなたはSNS運用者です。以下のブログ/ニュース記事のタイトルと一部の内容を読み取り、Threads向けのキャッチーな紹介文（絵文字入り、ハッシュタグ2〜3個）を作成してください。
+必ず『続きを読むにはこちら👇』と書いて、その下にURLを配置してください。出力は投稿文のテキストのみにし、余計な説明は省いてください。`
 
     const userPrompt = `記事タイトル: ${latestItem.title}\n概要: ${latestItem.contentSnippet || latestItem.content}\nURL: ${latestItem.link}`
 

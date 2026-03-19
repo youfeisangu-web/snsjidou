@@ -8,6 +8,7 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const content = formData.get('content') as string
     const platform = formData.get('platform') as string
+    const profileId = formData.get('profileId') as string | null
     const image = formData.get('image') as File | null
     const scheduledAtStr = formData.get('scheduledAt') as string | null
 
@@ -15,12 +16,18 @@ export async function POST(req: Request) {
     let publicImageUrl: string | null = null
 
     const settings = await prisma.setting.findUnique({ where: { id: 1 } })
+    
+    let profile = null
+    if (profileId) {
+      profile = await prisma.profile.findUnique({ where: { id: profileId } })
+    } else {
+      profile = await prisma.profile.findFirst({ orderBy: { createdAt: 'desc' } })
+    }
 
     if (image) {
       const bytes = await image.arrayBuffer()
       const buffer = Buffer.from(bytes)
 
-      // 1. ローカルに保存
       const uploadDir = path.join(process.cwd(), 'public', 'uploads')
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true })
@@ -30,7 +37,6 @@ export async function POST(req: Request) {
       fs.writeFileSync(filepath, buffer)
       imagePath = `/uploads/${filename}`
 
-      // 2. ImgBBにアップロードして公開URLを取得（設定がある場合）
       if (settings?.imgbbApiKey) {
         try {
           const imgFormData = new FormData()
@@ -42,9 +48,6 @@ export async function POST(req: Request) {
           const imgbbData = await imgbbRes.json()
           if (imgbbData.success) {
             publicImageUrl = imgbbData.data.url
-            console.log('Public URL generated:', publicImageUrl)
-          } else {
-            console.error('ImgBB Error:', imgbbData)
           }
         } catch (error) {
           console.error('Failed to upload to ImgBB:', error)
@@ -58,124 +61,58 @@ export async function POST(req: Request) {
     
     const isScheduled = !!scheduledAtStr && new Date(scheduledAtStr) > new Date()
 
-    if (settings) {
+    if (profile) {
       if (isScheduled) {
         status = 'scheduled'
       } else {
         status = 'published'
 
-        // Facebookへ投稿
-        if ((platform === 'facebook' || platform === 'both') && settings.fbPageId && settings.fbAccessToken) {
+        // Threadsへ投稿
+        if ((platform === 'threads' || platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
           try {
-            let fbUrl = `https://graph.facebook.com/v19.0/${settings.fbPageId}/feed`
+            let mediaUrl = `https://graph.threads.net/v1.0/${profile.threadsUserId}/threads`
             let payload: any = {
-              message: content,
-              access_token: settings.fbAccessToken
+              media_type: 'TEXT',
+              text: content,
+              access_token: profile.threadsAccessToken
             }
 
-            // publicImageUrlがあれば写真投稿エンドポイントに切り替える
             if (publicImageUrl) {
-              fbUrl = `https://graph.facebook.com/v19.0/${settings.fbPageId}/photos`
               payload = {
-                url: publicImageUrl,
-                caption: content, // messageでなくcaptionになります
-                access_token: settings.fbAccessToken
+                media_type: 'IMAGE',
+                image_url: publicImageUrl,
+                text: content,
+                access_token: profile.threadsAccessToken
               }
             }
 
-            const fbRes = await fetch(fbUrl, {
+            const mediaRes = await fetch(mediaUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
             })
+            const mediaData = await mediaRes.json()
 
-            const fbData = await fbRes.json()
-            if (fbData.error) {
-              console.error('FB API Error:', fbData.error)
-              status = 'failed'
-            } else {
-              fbPostId = fbData.id
-            }
-          } catch (error) {
-            console.error('FB API Catch Error:', error)
-            status = 'failed'
-          }
-        }
+            if (mediaData.id) {
+              const creationId = mediaData.id
 
-        // Threadsへ投稿
-        if ((platform === 'threads' || platform === 'both') && settings.threadsUserId && settings.threadsAccessToken) {
-          try {
-            // コンテナ作成
-            const createUrl = `https://graph.threads.net/v1.0/${settings.threadsUserId}/threads`
-            
-            let createPayload: any = {
-              media_type: 'TEXT',
-              text: content,
-              access_token: settings.threadsAccessToken
-            }
-
-            if (publicImageUrl) {
-              createPayload = {
-                media_type: 'IMAGE',
-                image_url: publicImageUrl,
-                text: content,
-                access_token: settings.threadsAccessToken
-              }
-            }
-
-            const createRes = await fetch(createUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(createPayload)
-            })
-            const createData = await createRes.json()
-
-            if (createData.id) {
-              // コンテナの公開処理
-              const publishUrl = `https://graph.threads.net/v1.0/${settings.threadsUserId}/threads_publish`
-              const publishRes = await fetch(publishUrl, {
+              const publishRes = await fetch(`https://graph.threads.net/v1.0/${profile.threadsUserId}/threads_publish`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  creation_id: createData.id,
-                  access_token: settings.threadsAccessToken
+                  creation_id: creationId,
+                  access_token: profile.threadsAccessToken
                 })
               })
               const publishData = await publishRes.json()
-              if (publishData.error) {
-                console.error('Threads Publish Error:', publishData.error)
-                status = 'failed'
-              } else {
+              if (publishData.id) {
                 threadsId = publishData.id
-
-                // HPのURL設定があれば、コメント（リプライ）として追加する
-                if (settings.hpUrl) {
-                  try {
-                    const replyCreateRes = await fetch(`https://graph.threads.net/v1.0/${settings.threadsUserId}/threads`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        media_type: 'TEXT', 
-                        text: `詳細はこちら: ${settings.hpUrl}`, 
-                        reply_to_id: threadsId,
-                        access_token: settings.threadsAccessToken 
-                      })
-                    })
-                    const replyCreateData = await replyCreateRes.json()
-                    if (replyCreateData.id) {
-                      await fetch(`https://graph.threads.net/v1.0/${settings.threadsUserId}/threads_publish`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ creation_id: replyCreateData.id, access_token: settings.threadsAccessToken })
-                      })
-                    }
-                  } catch (replyErr) {
-                    console.error('Failed to post Thread reply with HP URL', replyErr)
-                  }
-                }
+              } else {
+                console.error('Threads Publish Error:', publishData)
+                status = 'failed'
               }
             } else {
-              console.error('Threads Create Media Error:', createData.error)
+              console.error('Threads Media Error:', mediaData)
               status = 'failed'
             }
           } catch (error) {
@@ -186,22 +123,41 @@ export async function POST(req: Request) {
       }
     }
 
-    // データベースに投稿履歴を保存
     const post = await prisma.post.create({
       data: {
         content,
         platform,
-        imagePath: publicImageUrl || imagePath, // 公開URLがあればそれを優先
+        imageUrl: imagePath,
         status,
-        fbPostId,
+        scheduledAt: scheduledAtStr ? new Date(scheduledAtStr) : null,
         threadsId,
-        scheduledAt: scheduledAtStr ? new Date(scheduledAtStr) : null
+        profileId: profile?.id
       }
     })
 
     return NextResponse.json(post)
+
   } catch (error) {
-    console.error('Error in /api/posts:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    console.error('Create post error:', error)
+    return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })
+  }
+}
+
+import { cookies } from 'next/headers'
+
+export async function GET() {
+  try {
+    const cookieStore = await cookies()
+    const activeProfileId = cookieStore.get('activeProfileId')?.value
+
+    const posts = await prisma.post.findMany({
+      where: activeProfileId ? { profileId: activeProfileId } : {},
+      orderBy: { publishedAt: 'desc' },
+      include: { insights: true, profile: true }
+    })
+    return NextResponse.json(posts)
+  } catch (error) {
+    console.error('Fetch posts error:', error)
+    return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
   }
 }

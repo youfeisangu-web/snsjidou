@@ -10,8 +10,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'MetaSocialCommander',
-  description: 'Manage Facebook and Threads posts with analytics.',
+  title: 'メタソーシャルコマンダー - Threads自動化ツール',
+  description: 'Manage Threads posts with analytics.',
 }
 
 export default function RootLayout({

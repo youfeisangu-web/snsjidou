@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json()
+    const { prompt, profileId, image } = await req.json()
     if (!prompt) return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
 
     const settings = await prisma.setting.findUnique({ where: { id: 1 } })
@@ -11,11 +11,50 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Gemini API Key is not configured' }, { status: 400 })
     }
 
-    const sysPrompt = `あなたはSNSマーケティングのプロフェッショナルです。
-入力されたテーマや短いメモを元に、FacebookやThreadsでバズりやすい、エンゲージメント（いいね、コメント）を獲得できる魅力的な投稿文を作成してください。
-必要に応じて、マーケティングの視点から「請求書や経理のあるあるネタ（共感系）」や「有益な宣伝投稿」の要素を取り入れてください。
-出力は投稿文のテキストのみとしてください（余計な挨拶や説明は不要）。
-適度に絵文字やハッシュタグを使用し、改行をうまく使って読みやすくしてください。`
+    const profile = profileId 
+      ? await prisma.profile.findUnique({ where: { id: profileId } })
+      : await prisma.profile.findFirst({ orderBy: { createdAt: 'desc' } })
+    
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 400 })
+    }
+
+    const customPersona = profile.aiPrompt 
+      ? `【あなたの人格（ペルソナ）・アカウントの前提・絶対遵守の指示】\n${profile.aiPrompt}\n`
+      : `あなたはSNSマーケティングのプロフェッショナルです。\n`;
+
+    const serviceInfo = `
+【サービス情報：実装済みの機能】
+${profile.implementedFeatures || '（特になし）'}
+
+【サービス情報：開発中・今後の実装予定機能】
+${profile.upcomingFeatures || '（特になし）'}
+
+【ターゲットとする関連項目・リサーチテーマ（これらに関連するトピックスに言及・意見を述べてインプレッションを獲得してください）】
+${profile.relatedTopics || '（特になし）'}
+`
+
+    const sysPrompt = `${customPersona}
+上記の【あなたの人格】として振る舞い、以下のサービス情報を踏まえて投稿を生成してください。
+${serviceInfo}
+
+入力されたテーマや短いメモを元に、Threadsで共感とエンゲージメント（いいね、コメント、インプレッション）を圧倒的に獲得できる魅力的な投稿文を作成してください。
+無駄な挨拶や『こちらが投稿文です』系のメタ発言は一切不要です。直接コピペして使える文章のみを出力してください。
+出力は【投稿文のテキストのみ】としてください（余計な挨拶や前置きは絶対に不要）。
+適度に絵文字やハッシュタグを使用し、改行をうまく使ってスマホで読みやすくしてください。`
+
+    const userParts: any[] = [{ text: prompt }]
+    if (image) {
+      const match = image.match(/^data:(image\/[a-zA-Z]*);base64,(.*)$/)
+      if (match) {
+        userParts.push({
+          inlineData: {
+            data: match[2],
+            mimeType: match[1]
+          }
+        })
+      }
+    }
 
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
       method: 'POST',
@@ -23,7 +62,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: sysPrompt }] },
         contents: [
-          { role: "user", parts: [{ text: prompt }] }
+          { role: "user", parts: userParts }
         ],
         generationConfig: {
            temperature: 0.7,

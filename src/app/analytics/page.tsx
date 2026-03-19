@@ -1,8 +1,14 @@
 import { prisma } from '@/lib/prisma'
-import { Facebook, AtSign, Eye, Heart, MessageCircle, Repeat } from 'lucide-react'
+import { AtSign, Eye, Heart, MessageCircle, Repeat } from 'lucide-react'
+
+import { cookies } from 'next/headers'
 
 export default async function AnalyticsPage() {
+  const cookieStore = await cookies()
+  const activeProfileId = cookieStore.get('activeProfileId')?.value
+
   const posts = await prisma.post.findMany({
+    where: activeProfileId ? { profileId: activeProfileId } : {},
     orderBy: { publishedAt: 'desc' },
     include: {
       insights: {
@@ -50,10 +56,7 @@ export default async function AnalyticsPage() {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2">
-                        {post.platform === 'facebook' || post.platform === 'both' ? <Facebook className="w-4 h-4 text-blue-600/70" /> : null}
-                        {post.platform === 'threads' || post.platform === 'both' ? <AtSign className="w-4 h-4 text-gray-900/70" /> : null}
-                      </div>
+                        <AtSign className="w-4 h-4 text-gray-900/70" />
                     </td>
                     <td className="px-4 py-6 text-right"><span className="text-sm text-gray-600 font-light">{insight.impressions.toLocaleString()}</span></td>
                     <td className="px-4 py-6 text-right"><span className="text-sm text-gray-600 font-light">{insight.likes.toLocaleString()}</span></td>

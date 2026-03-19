@@ -1,23 +1,57 @@
 'use client'
 
-import { useState } from 'react'
-import { ImagePlus, X, Facebook, AtSign, Send, Sparkles } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ImagePlus, X, AtSign, Send, Sparkles, UserCircle } from 'lucide-react'
 
 export default function CreatePostPage() {
   const [content, setContent] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [platform, setPlatform] = useState<'both' | 'facebook' | 'threads'>('both')
+  const [platform, setPlatform] = useState<'threads'>('threads')
   const [scheduledAt, setScheduledAt] = useState('')
   const [status, setStatus] = useState<'idle' | 'publishing' | 'scheduled' | 'success' | 'error' | 'generating'>('idle')
+  
+  const [profiles, setProfiles] = useState<any[]>([])
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('')
+
+  useEffect(() => {
+    fetch('/api/profiles')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProfiles(data)
+          const match = document.cookie.match(/activeProfileId=([^;]+)/)
+          if (match && match[1]) {
+            setSelectedProfileId(match[1])
+          } else if (data.length > 0) {
+            setSelectedProfileId(data[0].id)
+          }
+        }
+      })
+  }, [])
 
   const handleGenerateAI = async () => {
     setStatus('generating')
     try {
+      let base64Image = null;
+      if (imageFile) {
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        base64Image = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+        });
+      }
+
+      const aiPrompt = content.trim() || (imageFile ? 'この画像の内容を理解して、それに関連する魅力的なSNS投稿を作成して。' : '今日の天気やトレンドに合った魅力的なSNS投稿を作成して。');
+
       const res = await fetch('/api/ai/generate-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: content.trim() || '今日の天気やトレンドに合った魅力的なSNS投稿を作成して。' })
+        body: JSON.stringify({ 
+          prompt: aiPrompt, 
+          profileId: selectedProfileId,
+          image: base64Image
+        })
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -49,6 +83,7 @@ export default function CreatePostPage() {
     const formData = new FormData()
     formData.append('content', content)
     formData.append('platform', platform)
+    if (selectedProfileId) formData.append('profileId', selectedProfileId)
     if (imageFile) formData.append('image', imageFile)
     if (scheduledAt) formData.append('scheduledAt', new Date(scheduledAt).toISOString())
 
@@ -87,7 +122,8 @@ export default function CreatePostPage() {
       <div className="grid gap-12">
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400">本文</h2>
+            <div className="flex-1" />
+
             <button 
               onClick={handleGenerateAI}
               disabled={status === 'generating'}
@@ -150,14 +186,8 @@ export default function CreatePostPage() {
           <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400">投稿先プラットフォーム</h2>
           <div className="flex flex-wrap gap-4">
             <PlatformSelector 
-              active={platform === 'both' || platform === 'facebook'}
-              onClick={() => platform === 'facebook' ? setPlatform('both') : platform === 'threads' ? setPlatform('both') : setPlatform('facebook')}
-              icon={<Facebook strokeWidth={1.5} className="w-5 h-5" />}
-              label="Facebook"
-            />
-            <PlatformSelector 
-              active={platform === 'both' || platform === 'threads'}
-              onClick={() => platform === 'threads' ? setPlatform('both') : platform === 'facebook' ? setPlatform('both') : setPlatform('threads')}
+              active={platform === 'threads'}
+              onClick={() => setPlatform('threads')}
               icon={<AtSign strokeWidth={1.5} className="w-5 h-5" />}
               label="Threads"
             />

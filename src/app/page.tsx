@@ -1,21 +1,36 @@
 import { prisma } from '@/lib/prisma'
-import { ArrowUpRight, Facebook, AtSign } from 'lucide-react'
+import { ArrowUpRight, AtSign, Eye, Heart } from 'lucide-react'
 import { SyncButton } from '@/components/SyncButton'
 import { DashboardChart } from '@/components/DashboardChart'
 import { AIAssistant } from '@/components/AIAssistant'
+import { cookies } from 'next/headers'
 
 // Very simple, generic Card component structure for elegant layout
 export default async function DashboardPage() {
-  const pageInsights = await prisma.pageInsight.findMany()
-  const recentPosts = await prisma.post.findMany({
-    orderBy: { publishedAt: 'desc' },
-    take: 5,
-    include: { insights: true }
-  })
+  const cookieStore = await cookies()
+  let activeProfileId = cookieStore.get('activeProfileId')?.value
+
+  // If no cookie, fallback to first profile
+  if (!activeProfileId) {
+    const firstProfile = await prisma.profile.findFirst({ orderBy: { createdAt: 'desc' } })
+    if (firstProfile) activeProfileId = firstProfile.id
+  }
+
+  const pageInsights = activeProfileId 
+    ? await prisma.pageInsight.findMany({ where: { profileId: activeProfileId } })
+    : []
+
+  const recentPosts = activeProfileId
+    ? await prisma.post.findMany({
+        where: { profileId: activeProfileId, status: 'published' },
+        orderBy: { publishedAt: 'desc' },
+        take: 5,
+        include: { insights: true }
+      })
+    : []
 
   // Basic aggregation
-  const fbInsight = pageInsights.find((i: any) => i.platform === 'facebook') || { followersCount: 0, totalImpressions: 0, totalEngagement: 0 }
-  const thInsight = pageInsights.find((i: any) => i.platform === 'threads') || { followersCount: 0, totalImpressions: 0, totalEngagement: 0 }
+  const thInsight = pageInsights.find((i: any) => i.platform === 'threads') || { followers: 0, postImpressions: 0, pageViews: 0 }
 
   return (
     <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -33,11 +48,9 @@ export default async function DashboardPage() {
 
       <section>
         <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 mb-8">主要な指標 (Key Metrics)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <KpiCard title="FB フォロワー数" value={fbInsight.followersCount.toLocaleString()} icon={<Facebook className="w-4 h-4" />} />
-          <KpiCard title="FB インプレッション" value={fbInsight.totalImpressions.toLocaleString()} icon={<ArrowUpRight className="w-4 h-4" />} />
-          <KpiCard title="Threads フォロワー数" value={thInsight.followersCount.toLocaleString()} icon={<AtSign className="w-4 h-4" />} />
-          <KpiCard title="Threads 反応 (Engagement)" value={thInsight.totalEngagement.toLocaleString()} icon={<ArrowUpRight className="w-4 h-4" />} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          <KpiCard title="Threads フォロワー数" value={thInsight.followers.toLocaleString()} icon={<AtSign className="w-4 h-4" />} />
+          <KpiCard title="Threads 反応 (Engagement)" value={thInsight.postImpressions.toLocaleString()} icon={<ArrowUpRight className="w-4 h-4" />} />
         </div>
       </section>
 
@@ -65,8 +78,7 @@ export default async function DashboardPage() {
                  <div key={post.id} className="group relative flex flex-col gap-3 p-5 rounded-2xl bg-white border border-gray-100 hover:border-primary-200 transition-all duration-300">
                    <div className="flex items-center justify-between">
                      <div className="flex items-center gap-2">
-                       {post.platform === 'facebook' || post.platform === 'both' ? <Facebook className="w-3.5 h-3.5 text-blue-600/70" /> : null}
-                       {post.platform === 'threads' || post.platform === 'both' ? <AtSign className="w-3.5 h-3.5 text-gray-900/70" /> : null}
+                       <AtSign className="w-3.5 h-3.5 text-gray-900/70" />
                        <span className="text-[10px] uppercase tracking-wider text-gray-400/80">
                          {new Date(post.publishedAt).toLocaleDateString()}
                        </span>

@@ -15,35 +15,24 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json()
-    const { fbPageId, fbAccessToken, threadsUserId, threadsAccessToken, geminiApiKey, imgbbApiKey, rssUrl, hpUrl } = data
+    const { geminiApiKey, imgbbApiKey } = data
 
     const settings = await prisma.setting.upsert({
       where: { id: 1 },
       update: {
-        fbPageId,
-        fbAccessToken,
-        threadsUserId,
-        threadsAccessToken,
         geminiApiKey,
-        imgbbApiKey,
-        rssUrl,
-        hpUrl
+        imgbbApiKey
       },
       create: {
         id: 1,
-        fbPageId,
-        fbAccessToken,
-        threadsUserId,
-        threadsAccessToken,
         geminiApiKey,
-        imgbbApiKey,
-        rssUrl,
-        hpUrl
+        imgbbApiKey
       }
     })
 
     return NextResponse.json(settings)
   } catch (error) {
+    console.error('Save error:', error)
     return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 })
   }
 }
