@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function CalendarPage() {
   const cookieStore = await cookies()
   const activeProfileId = cookieStore.get('activeProfileId')?.value
+  const profile = activeProfileId ? await prisma.profile.findUnique({ where: { id: activeProfileId } }) : null
 
   const posts = await prisma.post.findMany({
     where: activeProfileId ? { profileId: activeProfileId } : {},
@@ -32,7 +33,7 @@ export default async function CalendarPage() {
         </div>
       </header>
 
-      <CalendarView posts={posts} />
+      <CalendarView posts={posts} profile={profile} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-16">
         <section className="space-y-8">

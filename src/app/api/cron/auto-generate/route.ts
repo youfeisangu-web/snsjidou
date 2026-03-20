@@ -62,59 +62,102 @@ ${profile.relatedTopics || '（特になし）'}
           return { profileId: profile.id, scheduledCount: 0, message: '在庫が十分なため生成をスキップします。' };
         }
 
-        const sysPrompt = `${customPersona}
+        let combinedPosts: any[] = []
+
+        // 1. Pull from drafts first
+        const drafts = await prisma.post.findMany({
+          where: { profileId: profile.id, status: 'draft' },
+          orderBy: { id: 'asc' },
+          take: generateCount
+        })
+        for (const d of drafts) {
+          combinedPosts.push({ content: d.content, suggestedTime: 'any', draftId: d.id })
+        }
+        generateCount -= drafts.length
+
+        // 2. Generate with AI if needed
+        if (generateCount > 0 && true /* We already checked autoCreateDeficientPosts, wait, actually if we hit this, we need Gemini */) {
+          const sysPrompt = `${customPersona}
 上記の【あなたの人格】として振る舞い、以下のサービス情報を踏まえて投稿を生成してください。
 ${serviceInfo}
 
-市場調査データや対象ペルソナの悩みを分析し、独立した投稿内容を合計${generateCount}個（1日あたり${countPerDay}投稿ペース想定）考案してください。
-投稿のテーマには、以下のバリエーションを必ず織り交ぜてください：
-1. 指定された「関連項目・リサーチテーマ」や「経理・請求書」など現場の悩みに寄り添う『あるあるネタ』や共感を生むもの。
-2. 指定された「実装済みの機能」や「実装予定の機能」などのサービスアップデート情報や、自然な『宣伝投稿』。
-3. 日本の経理・税務制度などの最新トレンドに対する意見や、SNSでエンゲージメントを獲得しやすい有益なビジネスハック。
+向こう${targetDays}日分（1日あたり${countPerDay}投稿ペース想定）の独立した投稿内容を考案してください。
+
+【スレッド形式（ツリー投稿）の推奨】
+長文になる場合や、クイズ形式、結論を焦らしたい場合は、1つの投稿にまとめず、Threadsでよくある「スレッド形式（リプライで続きを書く）」にしてください。
+スレッド形式にする場合は、各投稿（親投稿、子投稿1、子投稿2...）の間を必ず \`|||THREAD|||\` という文字列で区切ってください。
+
+【URLの自然な誘導】
+たまに（毎回ではなく自然な頻度で）、スレッドの一番最後（一番下）の投稿に、あなたのホームページURL（${profile.hpUrl || '設定なし'}）への誘導文を含めてください。単にURLを貼るだけでなく、「〇〇の続きはWebで！」「詳しくはプロフィールのリンク（または以下のURL）から👇」のように魅力的な文章を添えてください。
 
 出力は必ずJSON形式の配列で返してください。内部形式:
 [
-  { "content": "（投稿文1、ハッシュタグや絵文字含む完全なスレッド文章）" },
-  { "content": "（投稿文2）" },
-  ...
+  { "content": "（投稿文1。スレッドの場合は: 1投稿目 |||THREAD||| 2投稿目 |||THREAD||| 3投稿目(URL付き) ）", "suggestedTime": "morning" },
+  { "content": "（投稿文2）", "suggestedTime": "any" }
 ]
-余計なマークダウンや説明は不要です。配列から始めてください。
+※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。余計なマークダウンや説明は不要です。配列から始めてください。
 ${contextContext}`
 
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: sysPrompt }] },
-            contents: [
-              { role: "user", parts: [{ text: "完全にゼロから、SNSでバズりやすい極上の投稿を生成してスケジュール用にJSONを返してください。" }] }
-            ],
-            generationConfig: {
-              temperature: 0.9,
-              maxOutputTokens: 2000,
-              responseMimeType: "application/json"
-            }
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: sysPrompt }] },
+              contents: [
+                { role: "user", parts: [{ text: "完全にゼロから、SNSでバズりやすい極上の投稿を生成してスケジュール用にJSONを返してください。" }] }
+              ],
+              generationConfig: {
+                temperature: 0.9,
+                maxOutputTokens: 8192,
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      content: { type: "STRING" },
+                      suggestedTime: { type: "STRING" }
+                    },
+                    required: ["content", "suggestedTime"]
+                  }
+                }
+              }
+            })
           })
-        })
 
-        if (!res.ok) throw new Error(`Gemini API Error for profile ${profile.id}`)
-        
-        const data = await res.json()
-        let generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]'
-        generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim()
+          if (!res.ok) throw new Error(`Gemini API Error for profile ${profile.id}`)
+          
+          const data = await res.json()
+          let generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]'
+          generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim()
 
-        let postsArray: any[] = []
-        try { 
-          const match = generatedText.match(/\[[\s\S]*\]/)
-          if (match) generatedText = match[0]
-          postsArray = JSON.parse(generatedText) 
-        } catch { 
-          console.error(`JSON Parse Error for profile ${profile.id}. Raw text:`, generatedText);
-          return { profileId: profile.id, error: 'JSON Parse Error' } 
+          let postsArray: any[] = []
+          try { 
+            let parsed = null;
+            try {
+              parsed = JSON.parse(generatedText);
+            } catch (e) {
+              const start = generatedText.indexOf('[');
+              const end = generatedText.lastIndexOf(']');
+              if (start !== -1 && end !== -1 && end > start) {
+                parsed = JSON.parse(generatedText.substring(start, end + 1));
+              } else {
+                throw e;
+              }
+            }
+            postsArray = parsed;
+          } catch { 
+            console.error(`JSON Parse Error for profile ${profile.id}. Raw text:`, generatedText);
+            return { profileId: profile.id, error: 'JSON Parse Error' } 
+          }
+
+          if (Array.isArray(postsArray)) {
+            postsArray.forEach(p => combinedPosts.push({ content: p.content, suggestedTime: p.suggestedTime || 'any' }))
+          }
         }
 
-        if (!Array.isArray(postsArray) || postsArray.length === 0) {
-          return { profileId: profile.id, error: 'Empty array returned' }
+        if (combinedPosts.length === 0) {
+          return { profileId: profile.id, error: 'Empty array returned and no drafts available' }
         }
 
         const currentScheduled = await prisma.post.findMany({
@@ -143,8 +186,8 @@ ${contextContext}`
         }
 
         const scheduledPosts = []
-        for (let i = 0; i < postsArray.length; i++) {
-          const postData = postsArray[i]
+        for (let i = 0; i < combinedPosts.length; i++) {
+          const postData = combinedPosts[i]
           if (postData.content) {
             const dayIndex = Math.floor(i / countPerDay)
             const postIndexInDay = i % countPerDay
@@ -152,21 +195,37 @@ ${contextContext}`
             const scheduledFor = new Date(scheduleDate)
             scheduledFor.setDate(scheduledFor.getDate() + dayIndex)
 
-            if (intervalType === 'uniform') {
-              const totalAvailableHours = 12 // 9am to 9pm
-              let hourOffset = 9
-              if (countPerDay > 1) {
-                  hourOffset = 9 + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
-              } else {
-                  hourOffset = 12
-              }
-              scheduledFor.setHours(Math.floor(hourOffset), (hourOffset % 1) * 60, 0, 0)
+            let finalHour = 12;
+            let finalMinute = 0;
+            
+            if (postData.suggestedTime === 'morning') {
+              finalHour = 7 + Math.floor(Math.random() * 3); // 7, 8, 9
+              finalMinute = Math.floor(Math.random() * 60);
+            } else if (postData.suggestedTime === 'noon') {
+              finalHour = 11 + Math.floor(Math.random() * 3); // 11, 12, 13
+              finalMinute = Math.floor(Math.random() * 60);
+            } else if (postData.suggestedTime === 'night') {
+              finalHour = 19 + Math.floor(Math.random() * 4); // 19 to 22
+              finalMinute = Math.floor(Math.random() * 60);
             } else {
-              // random time between 8am and 10pm (8 to 22)
-              const randomHour = 8 + Math.floor(Math.random() * 15)
-              const randomMinute = Math.floor(Math.random() * 60)
-              scheduledFor.setHours(randomHour, randomMinute, 0, 0)
+              if (intervalType === 'uniform') {
+                const totalAvailableHours = 12 // 9am to 9pm
+                let hourOffset = 9
+                if (countPerDay > 1) {
+                    hourOffset = 9 + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
+                } else {
+                    hourOffset = 12
+                }
+                finalHour = Math.floor(hourOffset);
+                finalMinute = Math.floor((hourOffset % 1) * 60);
+              } else {
+                finalHour = 12 + Math.floor(Math.random() * 6); // default fallback to noon-evening
+                finalMinute = Math.floor(Math.random() * 60)
+              }
             }
+            
+            // finalHour is JST. We subtract 9 to set it correctly in UTC.
+            scheduledFor.setUTCHours(finalHour - 9, finalMinute, 0, 0)
 
             let imageUrl = null;
             if (availableImages.length > 0) {
@@ -184,16 +243,28 @@ ${contextContext}`
               }
             }
             
-            const post = await prisma.post.create({
-              data: {
-                content: postData.content,
-                platform: 'both',
-                status: 'scheduled',
-                scheduledAt: scheduledFor,
-                profileId: profile.id,
-                imageUrl: imageUrl
-              }
-            })
+            let post;
+            if (postData.draftId) {
+              post = await prisma.post.update({
+                where: { id: postData.draftId },
+                data: {
+                  status: 'scheduled',
+                  scheduledAt: scheduledFor,
+                  imageUrl: imageUrl || undefined
+                }
+              })
+            } else {
+              post = await prisma.post.create({
+                data: {
+                  content: postData.content,
+                  platform: 'both',
+                  status: 'scheduled',
+                  scheduledAt: scheduledFor,
+                  profileId: profile.id,
+                  imageUrl: imageUrl
+                }
+              })
+            }
             scheduledPosts.push(post)
           }
         }

@@ -70,51 +70,51 @@ export async function POST(req: Request) {
         // Threadsへ投稿
         if ((platform === 'threads' || platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
           try {
-            let mediaUrl = `https://graph.threads.net/v1.0/${profile.threadsUserId}/threads`
-            let payload: any = {
-              media_type: 'TEXT',
-              text: content,
-              access_token: profile.threadsAccessToken
-            }
+            const threadNodes = content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean)
+            
+            let firstPublishedId = null
+            let lastPublishedId = null
 
-            if (publicImageUrl) {
-              payload = {
-                media_type: 'IMAGE',
-                image_url: publicImageUrl,
-                text: content,
+            for (let i = 0; i < threadNodes.length; i++) {
+              const nodeText = threadNodes[i]
+              const isFirstNode = (i === 0)
+              const hasImage = isFirstNode && publicImageUrl
+              
+              const payload: any = {
+                media_type: hasImage ? 'IMAGE' : 'TEXT',
+                text: nodeText,
                 access_token: profile.threadsAccessToken
               }
-            }
+              if (hasImage) payload.image_url = publicImageUrl
+              if (!isFirstNode && lastPublishedId) {
+                payload.reply_to_id = lastPublishedId
+              }
 
-            const mediaRes = await fetch(mediaUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            })
-            const mediaData = await mediaRes.json()
-
-            if (mediaData.id) {
-              const creationId = mediaData.id
-
-              const publishRes = await fetch(`https://graph.threads.net/v1.0/${profile.threadsUserId}/threads_publish`, {
+              const mediaRes = await fetch(`https://graph.threads.net/v1.0/${profile.threadsUserId}/threads`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  creation_id: creationId,
-                  access_token: profile.threadsAccessToken
-                })
+                body: JSON.stringify(payload)
               })
-              const publishData = await publishRes.json()
-              if (publishData.id) {
-                threadsId = publishData.id
+              const mediaData = await mediaRes.json()
+
+              if (mediaData.id) {
+                const publishRes = await fetch(`https://graph.threads.net/v1.0/${profile.threadsUserId}/threads_publish`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ creation_id: mediaData.id, access_token: profile.threadsAccessToken })
+                })
+                const pubData = await publishRes.json()
+                lastPublishedId = pubData.id || mediaData.id
+                if (isFirstNode) firstPublishedId = lastPublishedId
+
+                if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 2000))
               } else {
-                console.error('Threads Publish Error:', publishData)
+                console.error('Threads Media Error:', mediaData)
                 status = 'failed'
+                break
               }
-            } else {
-              console.error('Threads Media Error:', mediaData)
-              status = 'failed'
             }
+            threadsId = firstPublishedId
           } catch (error) {
             console.error('Threads API Catch Error:', error)
             status = 'failed'

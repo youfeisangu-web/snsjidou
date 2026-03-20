@@ -18,7 +18,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         implementedFeatures: data.implementedFeatures,
         upcomingFeatures: data.upcomingFeatures,
         relatedTopics: data.relatedTopics,
-        isActive: data.isActive
+        isActive: data.isActive,
+        postCountPerDay: data.postCountPerDay !== undefined ? parseInt(data.postCountPerDay, 10) : undefined,
+        postIntervalType: data.postIntervalType,
+        autoCreateDeficientPosts: data.autoCreateDeficientPosts,
+        useImageWarehouse: data.useImageWarehouse
       }
     })
 

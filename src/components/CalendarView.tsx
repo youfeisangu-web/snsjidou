@@ -3,15 +3,87 @@
 import { useState } from 'react'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Clock, AtSign, Rss } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, AtSign, Rss, Archive, RefreshCw, X } from 'lucide-react'
 
 type Post = any
 
-export function CalendarView({ posts }: { posts: Post[] }) {
+export function CalendarView({ posts, profile }: { posts: Post[], profile?: any }) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [editingPost, setEditingPost] = useState<Post | null>(null)
+  const [editContent, setEditContent] = useState('')
+  const [editTime, setEditTime] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [postCountPerDay, setPostCountPerDay] = useState(profile?.postCountPerDay || 3)
+  const [postIntervalType, setPostIntervalType] = useState(profile?.postIntervalType || 'uniform')
+  const [isRescheduling, setIsRescheduling] = useState(false)
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+
+  const handleReschedule = async () => {
+    if (!profile) return;
+    if (!confirm('現在の設定で予約済みの投稿を再振り分け（リスケジュール）しますか？\n※既に過ぎた投稿や公開済みのものは変更されません。')) return;
+    
+    setIsRescheduling(true)
+    try {
+      const res = await fetch('/api/posts/reschedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: profile.id,
+          postCountPerDay,
+          postIntervalType
+        })
+      })
+      if (res.ok) {
+        window.location.reload()
+      } else {
+        const d = await res.json()
+        alert('エラー: ' + d.error)
+      }
+    } catch (e: any) {
+      alert('エラー: ' + e.message)
+    } finally {
+      setIsRescheduling(false)
+    }
+  }
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
+
+  const handlePostClick = (post: Post) => {
+    if (post.status !== 'scheduled' && post.status !== 'draft') {
+      alert('予約済み（未投稿）または在庫のもののみ編集できます');
+      return;
+    }
+    setEditingPost(post)
+    setEditContent(post.content)
+    if (post.status === 'scheduled') {
+      setEditTime(format(new Date(post.scheduledAt), 'HH:mm'))
+    } else {
+      setEditTime('')
+    }
+  }
+
+  const handleSave = async () => {
+    if (!editingPost) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/posts/${editingPost.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editContent, time: editTime })
+      })
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        const d = await res.json()
+        alert('エラー: ' + d.error)
+      }
+    } catch (e: any) {
+      alert('エラー: ' + e.message)
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(monthStart)
@@ -37,7 +109,8 @@ export function CalendarView({ posts }: { posts: Post[] }) {
       days.push(
         <div
           key={day.toString()}
-          className={`min-h-[120px] p-2 border-r border-b border-gray-100 flex flex-col transition-colors ${
+          onClick={() => dayPosts.length > 0 && setSelectedDay(cloneDay)}
+          className={`min-h-[120px] p-2 border-r border-b border-gray-100 flex flex-col transition-colors ${dayPosts.length > 0 ? 'cursor-pointer' : ''} ${
             !isSameMonth(day, monthStart)
               ? "bg-gray-50/50 text-gray-300"
               : isToday(day) ? "bg-primary-50/20 text-primary-600" : "bg-white text-gray-700 hover:bg-gray-50/50"
@@ -53,8 +126,9 @@ export function CalendarView({ posts }: { posts: Post[] }) {
             {dayPosts.slice(0, 3).map(post => (
               <div 
                 key={post.id} 
+                onClick={(e) => { e.stopPropagation(); post.status === 'scheduled' && handlePostClick(post) }}
                 className={`text-[10px] p-1.5 rounded-md leading-tight truncate border flex flex-col gap-1 transition-all ${
-                  post.status === 'scheduled' ? 'bg-indigo-50/80 border-indigo-100/50 text-indigo-700' : 'bg-white border-gray-200 text-gray-600'
+                  post.status === 'scheduled' ? 'bg-indigo-50/80 border-indigo-100/50 text-indigo-700 cursor-pointer hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-600'
                 }`}
               >
                 <div className="flex items-center gap-1 opacity-70">
@@ -86,8 +160,36 @@ export function CalendarView({ posts }: { posts: Post[] }) {
   }
 
   return (
-    <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Settings Card for Reschedule */}
+      {profile && (
+        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-end justify-between animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="flex flex-col md:flex-row gap-6 w-full md:w-auto">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-2">1日の投稿数</label>
+              <input type="number" min="1" max="50" className="w-full md:w-32 p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium" value={postCountPerDay} onChange={e => setPostCountPerDay(Number(e.target.value))} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-2">1日の中での投稿間隔</label>
+              <select className="w-full md:w-64 p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postIntervalType} onChange={e => setPostIntervalType(e.target.value)}>
+                <option value="uniform">等間隔（9時〜21時で均等）</option>
+                <option value="random">まちまち（ランダムな時間）</option>
+              </select>
+            </div>
+          </div>
+          <button 
+            onClick={handleReschedule} 
+            disabled={isRescheduling}
+            className="w-full md:w-auto px-6 py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRescheduling ? 'animate-spin' : ''}`} />
+            {isRescheduling ? '再振り分け中...' : '変更して再振り分け'}
+          </button>
+        </div>
+      )}
+
+      <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-gray-100">
         <h2 className="text-xl font-medium tracking-tight text-gray-900 flex items-center gap-3">
           <CalendarIcon className="w-5 h-5 text-primary-500" />
@@ -116,8 +218,108 @@ export function CalendarView({ posts }: { posts: Post[] }) {
       </div>
 
       {/* Calendar Grid */}
-      <div className="flex flex-col">
+      <div className="flex flex-col border-b border-gray-100">
         {rows}
+      </div>
+
+      {/* Inventory (Drafts) Section */}
+      {posts.filter(p => p.status === 'draft').length > 0 && (
+        <div className="p-6 bg-gray-50/30">
+          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Archive className="w-4 h-4 text-indigo-500" />
+            投稿の在庫（承認済み・未予約） {posts.filter(p => p.status === 'draft').length}件
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {posts.filter(p => p.status === 'draft').map(post => (
+              <div key={post.id} onClick={() => handlePostClick(post)} className="p-4 bg-white border border-gray-200 rounded-2xl hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer group flex flex-col justify-between gap-3">
+                <div className="text-xs text-gray-600 leading-relaxed line-clamp-4 group-hover:text-gray-900 transition-colors">
+                  {post.content}
+                </div>
+                <div className="text-[10px] font-medium text-indigo-500 bg-indigo-50 self-start px-2 py-1 rounded-md">在庫（自動入力待ち）</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-xl shadow-black/10 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-indigo-500" />
+              予約投稿の編集
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">投稿内容 <span className="text-xs text-gray-400 font-normal">※スレッドの場合は「|||THREAD|||」で区切ってください</span></label>
+                <textarea
+                  value={editContent}
+                  onChange={e => setEditContent(e.target.value)}
+                  className="w-full h-40 p-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none transition-colors leading-relaxed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">配信予定時間</label>
+                <input
+                  type="time"
+                  value={editTime}
+                  onChange={e => setEditTime(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setEditingPost(null)}
+                className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+              >
+                {isSaving ? '保存中...' : '変更を保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Day Details Modal */}
+      {selectedDay && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-xl shadow-black/10 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-indigo-500" />
+                {format(selectedDay, 'yyyy年 M月 d日')} の予定
+              </h3>
+              <button onClick={() => setSelectedDay(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+              {posts.filter(p => p.status === 'scheduled' && isSameDay(new Date(p.scheduledAt), selectedDay)).sort((a,b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()).map(post => (
+                <div key={post.id} onClick={() => handlePostClick(post)} className="flex items-start gap-4 p-4 rounded-2xl border border-indigo-100 bg-indigo-50/30 cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-all">
+                  <div className="flex-shrink-0 w-16 text-center">
+                    <span className="text-sm font-bold text-indigo-600">{format(new Date(post.scheduledAt), 'HH:mm')}</span>
+                    <span className="block text-[10px] text-gray-500 mt-1 uppercase tracking-widest">{post.status}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+                  </div>
+                </div>
+              ))}
+              {posts.filter(p => p.status === 'scheduled' && isSameDay(new Date(p.scheduledAt), selectedDay)).length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-8">この日の予約投稿はありません。</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   )

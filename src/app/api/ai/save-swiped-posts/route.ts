@@ -14,32 +14,13 @@ export async function POST(req: Request) {
     const profile = await prisma.profile.findUnique({ where: { id: profileId } })
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
-    // 1. Save Approved Posts to Calendar as scheduled
-    const currentScheduled = await prisma.post.findMany({
-      where: { profileId: profile.id, status: 'scheduled' },
-      orderBy: { scheduledAt: 'desc' },
-      take: 1
-    })
-    
-    let scheduleDate = new Date()
-    if (currentScheduled.length > 0 && currentScheduled[0].scheduledAt) {
-      scheduleDate = new Date(currentScheduled[0].scheduledAt)
-      scheduleDate.setDate(scheduleDate.getDate() + 1)
-    } else {
-      scheduleDate.setDate(scheduleDate.getDate() + 1)
-      scheduleDate.setHours(12, 0, 0, 0)
-    }
-
-    for (let i = 0; i < approvedPosts.length; i++) {
-      const scheduledFor = new Date(scheduleDate)
-      scheduledFor.setDate(scheduledFor.getDate() + i)
-      
+    // 1. Save Approved Posts as Inventory (Drafts)
+    for (const post of approvedPosts) {
       await prisma.post.create({
         data: {
-          content: approvedPosts[i].content,
+          content: post.content,
           platform: 'both',
-          status: 'scheduled',
-          scheduledAt: scheduledFor,
+          status: 'draft',
           profileId: profile.id
         }
       })

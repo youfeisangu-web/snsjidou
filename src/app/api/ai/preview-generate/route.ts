@@ -45,12 +45,21 @@ ${successRule}
 【予定】${profile.upcomingFeatures || '特になし'}
 【関連項目】${profile.relatedTopics || '特になし'}
 
-向こう${targetDays}日分の独立した投稿内容を考案してください。
+向こう${targetDays}日分（1日あたり1-3投稿ペース想定）の独立した投稿内容を考案してください。
+
+【スレッド形式（ツリー投稿）の推奨】
+長文になる場合や、クイズ形式、結論を焦らしたい場合は、1つの投稿にまとめず、Threadsでよくある「スレッド形式（リプライで続きを書く）」にしてください。
+スレッド形式にする場合は、各投稿（親投稿、子投稿1、子投稿2...）の間を必ず \`|||THREAD|||\` という文字列で区切ってください。
+
+【URLの自然な誘導】
+たまに（毎回ではなく自然な頻度で）、スレッドの一番最後（一番下）の投稿に、あなたのホームページURL（${profile.hpUrl || '設定なし'}）への誘導文を含めてください。単にURLを貼るだけでなく、「〇〇の続きはWebで！」「詳しくはプロフィールのリンク（または以下のURL）から👇」のように魅力的な文章を添えてください。
+
 出力は必ずJSON形式の配列で返してください。
 [
-  { "content": "（投稿文1、ハッシュタグや絵文字含む、具体的な文章）" },
-  { "content": "（投稿文2）" }
+  { "content": "（投稿文1。スレッドの場合は: 1投稿目 |||THREAD||| 2投稿目 |||THREAD||| 3投稿目(URL付き) ）", "suggestedTime": "morning" },
+  { "content": "（投稿文2）", "suggestedTime": "any" }
 ]
+※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。
 余計なマークダウンや説明は不要です。
 ${contextContext}`
 
@@ -64,8 +73,19 @@ ${contextContext}`
         ],
         generationConfig: {
           temperature: 0.9,
-          maxOutputTokens: 2000,
-          responseMimeType: "application/json"
+          maxOutputTokens: 8192,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                content: { type: "STRING" },
+                suggestedTime: { type: "STRING" }
+              },
+              required: ["content", "suggestedTime"]
+            }
+          }
         }
       })
     })
@@ -82,13 +102,23 @@ ${contextContext}`
 
     let postsArray: any[] = []
     try { 
-      // Enhance robustness for finding JSON array block
-      const match = generatedText.match(/\[[\s\S]*\]/)
-      if (match) generatedText = match[0]
-      postsArray = JSON.parse(generatedText) 
-    } catch { 
+      let parsed = null;
+      try {
+        parsed = JSON.parse(generatedText);
+      } catch (e) {
+        // Fallback: extract from first [ to last ]
+        const start = generatedText.indexOf('[');
+        const end = generatedText.lastIndexOf(']');
+        if (start !== -1 && end !== -1 && end > start) {
+          parsed = JSON.parse(generatedText.substring(start, end + 1));
+        } else {
+          throw e; // Re-throw to catch below
+        }
+      }
+      postsArray = parsed;
+    } catch (parseError: any) { 
       console.error('JSON Parse Error. Raw text:', generatedText)
-      return NextResponse.json({ error: 'JSON Parse Error' }, { status: 500 }) 
+      return NextResponse.json({ error: 'JSON Parse Error', details: parseError.message, rawText: generatedText }, { status: 500 }) 
     }
 
     return NextResponse.json({ posts: postsArray })
