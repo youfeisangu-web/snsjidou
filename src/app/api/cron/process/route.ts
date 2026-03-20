@@ -30,8 +30,28 @@ export async function GET() {
       // Threads
       if ((post.platform === 'threads' || post.platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
         try {
-          const threadNodes = post.content.split(/\|\|\|THREAD\|\|\|/).map((s: string) => s.trim()).filter(Boolean)
+          let initialNodes = post.content.split(/\|\|\|THREAD\|\|\|/).map((s: string) => s.trim()).filter(Boolean)
+          let threadNodes: string[] = []
           
+          for (const node of initialNodes) {
+             let currentText = node
+             while (currentText.length > 450) {
+                 let breakPoint = currentText.lastIndexOf('\n', 450)
+                 if (breakPoint === -1 || breakPoint < 100) {
+                     breakPoint = currentText.lastIndexOf('。', 450)
+                 }
+                 if (breakPoint === -1 || breakPoint < 100) {
+                     breakPoint = 450
+                 } else {
+                     breakPoint += 1
+                 }
+                 const chunk = currentText.substring(0, breakPoint).trim()
+                 if (chunk) threadNodes.push(chunk)
+                 currentText = currentText.substring(breakPoint).trim()
+             }
+             if (currentText.length > 0) threadNodes.push(currentText)
+          }
+
           if (profile.hpUrl && !post.content.includes(profile.hpUrl)) {
             threadNodes.push(`【詳細はこちら👇】\n${profile.hpUrl}`)
           }
