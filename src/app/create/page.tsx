@@ -11,6 +11,7 @@ export default function CreatePostPage() {
   const [scheduledAt, setScheduledAt] = useState('')
   const [postMode, setPostMode] = useState<'now' | 'schedule'>('now')
   const [status, setStatus] = useState<'idle' | 'publishing' | 'success' | 'error' | 'generating'>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const [profiles, setProfiles] = useState<any[]>([])
   const [selectedProfileId, setSelectedProfileId] = useState<string>('')
@@ -86,15 +87,17 @@ export default function CreatePostPage() {
 
     try {
       const res = await fetch('/api/posts', { method: 'POST', body: formData })
-      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '投稿に失敗しました')
       setStatus('success')
       setContent('')
       setScheduledAt('')
       removeImage()
       setTimeout(() => setStatus('idle'), 3000)
-    } catch {
+    } catch (e: any) {
+      setErrorMessage(e.message || '投稿に失敗しました')
       setStatus('error')
-      setTimeout(() => setStatus('idle'), 3000)
+      setTimeout(() => { setStatus('idle'); setErrorMessage('') }, 5000)
     }
   }
 
@@ -239,7 +242,9 @@ export default function CreatePostPage() {
           </p>
         )}
         {status === 'error' && (
-          <p className="text-center text-sm text-red-500 animate-in fade-in">エラーが発生しました。</p>
+          <p className="text-center text-sm text-red-500 animate-in fade-in">
+            {errorMessage || 'エラーが発生しました。'}
+          </p>
         )}
       </div>
     </div>
