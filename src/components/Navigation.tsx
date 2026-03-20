@@ -2,21 +2,20 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, PenSquare, BarChart3, Settings, Calendar, Menu, X, ChevronDown, UserCircle2, Image as ImageIcon } from 'lucide-react'
+import { LayoutDashboard, PenSquare, BarChart3, Settings, Calendar, ChevronDown, UserCircle2, Image as ImageIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 const navItems = [
-  { href: '/', label: 'ダッシュボード', icon: LayoutDashboard },
-  { href: '/create', label: '新規投稿', icon: PenSquare },
+  { href: '/', label: 'ホーム', icon: LayoutDashboard },
+  { href: '/create', label: '投稿', icon: PenSquare },
   { href: '/calendar', label: 'カレンダー', icon: Calendar },
   { href: '/analytics', label: '分析', icon: BarChart3 },
-  { href: '/assets', label: '画像倉庫', icon: ImageIcon },
+  { href: '/assets', label: '画像', icon: ImageIcon },
   { href: '/settings', label: '設定', icon: Settings },
 ]
 
 export default function Navigation() {
   const pathname = usePathname()
-  const [isOpen, setIsOpen] = useState(false)
   const [profiles, setProfiles] = useState<any[]>([])
   const [activeProfileId, setActiveProfileId] = useState<string>('')
   const [switcherOpen, setSwitcherOpen] = useState(false)
@@ -31,7 +30,6 @@ export default function Navigation() {
           if (match && match[1]) {
             setActiveProfileId(match[1])
           } else if (data.length > 0) {
-            // Default to first profile silently
             setActiveProfileId(data[0].id)
             document.cookie = `activeProfileId=${data[0].id}; path=/; max-age=31536000`
           }
@@ -50,58 +48,72 @@ export default function Navigation() {
 
   return (
     <>
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-md z-40 border-b border-primary-100 flex items-center justify-between px-6">
-        <div className="font-semibold tracking-wide text-sm text-primary-900">
-          MetaSocial
-        </div>
-        <button onClick={() => setIsOpen(!isOpen)} className="p-2 -mr-2 text-primary-900 focus:outline-none">
-          {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      {/* Mobile: Top Bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md z-40 border-b border-gray-100 flex items-center justify-between px-4">
+        <span className="font-semibold text-sm text-primary-900 tracking-wide">MetaSocial</span>
+        <button
+          onClick={() => setSwitcherOpen(!switcherOpen)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-50 text-primary-800 text-xs font-medium"
+        >
+          <UserCircle2 className="w-4 h-4 shrink-0" />
+          <span className="max-w-[120px] truncate">{activeProfile?.name || 'アカウント'}</span>
+          <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 ${switcherOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-background pt-20 px-6">
-          <div className="mb-8">
-            <div className="text-xs uppercase text-gray-400 mb-2 tracking-widest">Active Account</div>
-            <select 
-              value={activeProfileId}
-              onChange={(e) => handleSwitchProfile(e.target.value)}
-              className="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm text-primary-900 font-medium outline-none"
+      {/* Mobile: Profile Switcher Dropdown */}
+      {switcherOpen && (
+        <div className="md:hidden fixed top-14 left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-xl py-2 px-4 animate-in fade-in slide-in-from-top-2">
+          {profiles.map(p => (
+            <button
+              key={p.id}
+              onClick={() => handleSwitchProfile(p.id)}
+              className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 rounded-xl mb-1 transition-colors ${
+                activeProfileId === p.id ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+              }`}
             >
-              {profiles.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <nav className="flex flex-col gap-6">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-4 text-sm tracking-wide transition-colors duration-200 ${
-                    isActive ? 'text-primary-600 font-medium' : 'text-gray-500 hover:text-primary-800'
-                  }`}
-                >
-                  <Icon strokeWidth={isActive ? 2 : 1.5} className="w-5 h-5" />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </nav>
+              <div className={`w-2 h-2 rounded-full shrink-0 ${activeProfileId === p.id ? 'bg-primary-500' : 'bg-gray-200'}`} />
+              {p.name}
+            </button>
+          ))}
+          <Link
+            href="/settings"
+            onClick={() => setSwitcherOpen(false)}
+            className="block px-4 py-2 text-xs text-gray-400 text-center hover:text-primary-600 transition-colors"
+          >
+            アカウントを管理
+          </Link>
         </div>
       )}
 
-      {/* Desktop Sidebar */}
+      {/* Mobile: Bottom Tab Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100">
+        <div className="flex">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors duration-200 ${
+                  isActive ? 'text-primary-700' : 'text-gray-400'
+                }`}
+              >
+                <Icon strokeWidth={isActive ? 2 : 1.5} className="w-5 h-5" />
+                <span className={`text-[9px] font-medium ${isActive ? 'text-primary-700' : 'text-gray-400'}`}>
+                  {item.label}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Desktop: Sidebar */}
       <aside className="hidden md:flex w-64 h-screen sticky top-0 flex-col pt-12 px-8 border-r border-primary-100/40 shrink-0">
         <div className="mb-10 relative">
-          {/* Account Switcher */}
-          <button 
+          <button
             onClick={() => setSwitcherOpen(!switcherOpen)}
             className="w-full flex items-center justify-between p-3 rounded-2xl bg-white border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:border-primary-200 hover:shadow-md transition-all group"
           >
@@ -160,21 +172,15 @@ export default function Navigation() {
                 <span className={`text-sm tracking-wide ${isActive ? 'font-medium' : 'font-normal'}`}>
                   {item.label}
                 </span>
-                {isActive && (
-                 <span className="ml-auto w-1 h-1 rounded-full bg-primary-500" />
-                )}
+                {isActive && <span className="ml-auto w-1 h-1 rounded-full bg-primary-500" />}
               </Link>
             )
           })}
         </nav>
-        
+
         <div className="pb-8 mt-auto px-2">
-          <div className="font-semibold tracking-widest text-[#111] text-[10px] uppercase opacity-40 mb-1">
-            MetaSocial
-          </div>
-          <div className="text-[10px] text-gray-400/70 tracking-widest uppercase">
-            v2.0.0
-          </div>
+          <div className="font-semibold tracking-widest text-[#111] text-[10px] uppercase opacity-40 mb-1">MetaSocial</div>
+          <div className="text-[10px] text-gray-400/70 tracking-widest uppercase">v2.0.0</div>
         </div>
       </aside>
     </>

@@ -127,7 +127,7 @@ export async function POST(req: Request) {
       data: {
         content,
         platform,
-        imageUrl: imagePath,
+        imageUrl: publicImageUrl || imagePath,
         status,
         scheduledAt: scheduledAtStr ? new Date(scheduledAtStr) : null,
         threadsId,

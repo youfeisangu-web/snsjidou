@@ -25,17 +25,17 @@ export default async function CalendarPage() {
   const published = posts.filter((p: any) => p.status === 'published' || p.status === 'failed')
 
   return (
-    <div className="max-w-5xl space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-      <header className="flex items-end justify-between border-b border-primary-50 pb-8">
+    <div className="max-w-5xl space-y-8 md:space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      <header className="flex items-center justify-between border-b border-primary-50 pb-5 md:pb-8">
         <div>
-          <h1 className="text-3xl font-light tracking-tight text-primary-950 mb-2">投稿カレンダー</h1>
-          <p className="text-sm tracking-wide text-gray-500 font-normal">予約中の投稿やこれまでのコンテンツ履歴をスケジュール単位で管理します。</p>
+          <h1 className="text-xl md:text-3xl font-light tracking-tight text-primary-950 mb-1">投稿カレンダー</h1>
+          <p className="text-xs md:text-sm tracking-wide text-gray-500 font-normal hidden md:block">予約中の投稿やこれまでのコンテンツ履歴をスケジュール単位で管理します。</p>
         </div>
       </header>
 
       <CalendarView posts={posts} profile={profile} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-16">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12">
         <section className="space-y-8">
           <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary-400" />

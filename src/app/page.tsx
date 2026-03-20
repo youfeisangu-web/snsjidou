@@ -33,11 +33,11 @@ export default async function DashboardPage() {
   const thInsight = pageInsights.find((i: any) => i.platform === 'threads') || { followers: 0, postImpressions: 0, pageViews: 0 }
 
   return (
-    <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-      <header className="flex items-end justify-between border-b border-primary-50 pb-8">
+    <div className="space-y-8 md:space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      <header className="flex items-center justify-between border-b border-primary-50 pb-5 md:pb-8">
         <div>
-          <h1 className="text-3xl font-light tracking-tight text-primary-950 mb-2">ダッシュボード</h1>
-          <p className="text-sm tracking-wide text-gray-500 font-normal">Metaプラットフォーム全体でのブランドプレゼンスを監視します。</p>
+          <h1 className="text-xl md:text-3xl font-light tracking-tight text-primary-950 mb-1">ダッシュボード</h1>
+          <p className="text-xs md:text-sm tracking-wide text-gray-500 font-normal hidden md:block">Metaプラットフォーム全体でのブランドプレゼンスを監視します。</p>
         </div>
         <div className="flex gap-4">
           <SyncButton />
@@ -47,14 +47,14 @@ export default async function DashboardPage() {
       <AIAssistant profileId={activeProfileId} />
 
       <section>
-        <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 mb-8">主要な指標 (Key Metrics)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+        <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 mb-4 md:mb-8">主要な指標</h2>
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
           <KpiCard title="Threads フォロワー数" value={thInsight.followers.toLocaleString()} icon={<AtSign className="w-4 h-4" />} />
           <KpiCard title="Threads 反応 (Engagement)" value={thInsight.postImpressions.toLocaleString()} icon={<ArrowUpRight className="w-4 h-4" />} />
         </div>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
         <div>
            <div className="flex items-center justify-between mb-8">
              <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400">成長推移 (Growth Over Time)</h2>
@@ -97,12 +97,12 @@ export default async function DashboardPage() {
 
 function KpiCard({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) {
   return (
-    <div className="p-6 rounded-2xl bg-white border border-gray-100/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.02)] flex flex-col justify-between group hover:border-primary-200 transition-colors duration-300">
-      <div className="flex justify-between items-start mb-6 text-gray-400 group-hover:text-primary-600 transition-colors duration-300">
-        <span className="text-xs tracking-widest uppercase font-medium">{title}</span>
+    <div className="p-4 md:p-6 rounded-2xl bg-white border border-gray-100/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.02)] flex flex-col justify-between group hover:border-primary-200 transition-colors duration-300">
+      <div className="flex justify-between items-start mb-3 md:mb-6 text-gray-400 group-hover:text-primary-600 transition-colors duration-300">
+        <span className="text-[10px] md:text-xs tracking-widest uppercase font-medium">{title}</span>
         {icon}
       </div>
-      <div className="text-3xl font-light tracking-tight text-gray-900">{value}</div>
+      <div className="text-2xl md:text-3xl font-light tracking-tight text-gray-900">{value}</div>
     </div>
   )
 }
