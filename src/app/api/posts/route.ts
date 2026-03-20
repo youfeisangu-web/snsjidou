@@ -58,6 +58,7 @@ export async function POST(req: Request) {
     let fbPostId = null
     let threadsId = null
     let status = 'failed'
+    let threadsApiError: string | null = null
     
     const isScheduled = !!scheduledAtStr && new Date(scheduledAtStr) > new Date()
 
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
               const nodeText = threadNodes[i]
               const isFirstNode = (i === 0)
               const hasImage = isFirstNode && publicImageUrl
-              
+
               const payload: any = {
                 media_type: hasImage ? 'IMAGE' : 'TEXT',
                 text: nodeText,
@@ -109,6 +110,7 @@ export async function POST(req: Request) {
                 if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 2000))
               } else {
                 console.error('Threads Media Error:', mediaData)
+                threadsApiError = mediaData?.error?.message || JSON.stringify(mediaData)
                 status = 'failed'
                 break
               }
@@ -116,6 +118,7 @@ export async function POST(req: Request) {
             threadsId = firstPublishedId
           } catch (error) {
             console.error('Threads API Catch Error:', error)
+            threadsApiError = String(error)
             status = 'failed'
           }
         }
@@ -135,7 +138,8 @@ export async function POST(req: Request) {
     })
 
     if (!isScheduled && post.status === 'failed') {
-      return NextResponse.json({ error: 'Threads投稿に失敗しました。Settings でUser IDとAccess Tokenが正しく設定されているか確認してください。', post }, { status: 500 })
+      const detail = threadsApiError ? `\nAPI詳細: ${threadsApiError}` : ''
+      return NextResponse.json({ error: `Threads投稿に失敗しました。Settings でUser IDとAccess Tokenが正しく設定されているか確認してください。${detail}`, post }, { status: 500 })
     }
 
     return NextResponse.json(post)
