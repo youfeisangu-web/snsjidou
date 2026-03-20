@@ -70,7 +70,11 @@ export async function POST(req: Request) {
         if ((platform === 'threads' || platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
           status = 'published'
           try {
-            const threadNodes = content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean)
+            const threadNodes = content.split(/\|\|\|THREAD\|\|\|/).map((s: string) => s.trim()).filter(Boolean)
+            
+            if (profile.hpUrl && !content.includes(profile.hpUrl)) {
+              threadNodes.push(`【詳細はこちら👇】\n${profile.hpUrl}`)
+            }
             
             let firstPublishedId = null
             let lastPublishedId = null

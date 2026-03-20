@@ -30,7 +30,11 @@ export async function GET() {
       // Threads
       if ((post.platform === 'threads' || post.platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
         try {
-          const threadNodes = post.content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean)
+          const threadNodes = post.content.split(/\|\|\|THREAD\|\|\|/).map((s: string) => s.trim()).filter(Boolean)
+          
+          if (profile.hpUrl && !post.content.includes(profile.hpUrl)) {
+            threadNodes.push(`【詳細はこちら👇】\n${profile.hpUrl}`)
+          }
           
           let firstPublishedId = null
           let lastPublishedId = null
