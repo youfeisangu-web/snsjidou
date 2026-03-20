@@ -65,10 +65,9 @@ export async function POST(req: Request) {
       if (isScheduled) {
         status = 'scheduled'
       } else {
-        status = 'published'
-
         // Threadsへ投稿
         if ((platform === 'threads' || platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
+          status = 'published'
           try {
             const threadNodes = content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean)
             
@@ -134,6 +133,10 @@ export async function POST(req: Request) {
         profileId: profile?.id
       }
     })
+
+    if (!isScheduled && post.status === 'failed') {
+      return NextResponse.json({ error: 'Threads投稿に失敗しました。Settings でUser IDとAccess Tokenが正しく設定されているか確認してください。', post }, { status: 500 })
+    }
 
     return NextResponse.json(post)
 
