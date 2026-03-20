@@ -122,16 +122,48 @@ export async function POST(req: Request) {
               const mediaData = await mediaRes.json()
 
               if (mediaData.id) {
+                // Poll container status
+                let isFinished = false;
+                for (let poll = 0; poll < 10; poll++) {
+                  const statusRes = await fetch(`https://graph.threads.net/v1.0/${mediaData.id}?fields=status,error_message&access_token=${profile.threadsAccessToken}`);
+                  const statusData = await statusRes.json();
+                  if (statusData.status === 'FINISHED') {
+                    isFinished = true;
+                    break;
+                  } else if (statusData.status === 'ERROR') {
+                    console.error('Container error:', statusData);
+                    threadsApiError = statusData.error_message || 'Container creation failed';
+                    status = 'failed';
+                    break;
+                  }
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+
+                if (!isFinished && status !== 'failed') {
+                  threadsApiError = 'Container status timeout';
+                  status = 'failed';
+                  break;
+                }
+                if (status === 'failed') break;
+
                 const publishRes = await fetch(`https://graph.threads.net/v1.0/${profile.threadsUserId}/threads_publish`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ creation_id: mediaData.id, access_token: profile.threadsAccessToken })
                 })
                 const pubData = await publishRes.json()
-                lastPublishedId = pubData.id || mediaData.id
-                if (isFirstNode) firstPublishedId = lastPublishedId
+                
+                if (pubData.error) {
+                  console.error('Threads Publish Error:', pubData);
+                  threadsApiError = pubData.error.message || JSON.stringify(pubData.error);
+                  status = 'failed';
+                  break;
+                }
+                
+                lastPublishedId = pubData.id;
+                if (isFirstNode) firstPublishedId = lastPublishedId;
 
-                if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 2000))
+                if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 3000));
               } else {
                 console.error('Threads Media Error:', mediaData)
                 threadsApiError = mediaData?.error?.message || JSON.stringify(mediaData)

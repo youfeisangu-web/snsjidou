@@ -82,16 +82,45 @@ export async function GET() {
             const creationData = await creationRes.json()
             
             if (creationData.id) {
+              // Poll container status
+              let isFinished = false;
+              for (let poll = 0; poll < 10; poll++) {
+                const statusRes = await fetch(`https://graph.threads.net/v1.0/${creationData.id}?fields=status,error_message&access_token=${profile.threadsAccessToken}`);
+                const statusData = await statusRes.json();
+                if (statusData.status === 'FINISHED') {
+                  isFinished = true;
+                  break;
+                } else if (statusData.status === 'ERROR') {
+                  console.error('Container error:', statusData);
+                  newStatus = 'failed';
+                  break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+
+              if (!isFinished && newStatus !== 'failed') {
+                newStatus = 'failed';
+                break;
+              }
+              if (newStatus === 'failed') break;
+
               const publishRes = await fetch(`https://graph.threads.net/v1.0/${profile.threadsUserId}/threads_publish`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ creation_id: creationData.id, access_token: profile.threadsAccessToken })
               })
               const pubData = await publishRes.json()
-              lastPublishedId = pubData.id || creationData.id
-              if (isFirstNode) firstPublishedId = lastPublishedId
+              
+              if (pubData.error) {
+                console.error('Threads Publish Error:', pubData);
+                newStatus = 'failed';
+                break;
+              }
+              
+              lastPublishedId = pubData.id;
+              if (isFirstNode) firstPublishedId = lastPublishedId;
 
-              if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 2000))
+              if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 3000));
             } else {
               console.error('Threads API Creation Error', creationData)
               newStatus = 'failed'
