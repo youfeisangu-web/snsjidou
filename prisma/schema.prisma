@@ -41,6 +41,8 @@ model Profile {
   relatedTopics       String?  
   postCountPerDay     Int      @default(3)
   postIntervalType    String   @default("uniform") // "uniform", "random"
+  postStartHour       Int      @default(9)  // 投稿時間帯の開始時刻（JST）
+  postEndHour         Int      @default(21) // 投稿時間帯の終了時刻（JST）
   useImageWarehouse   Boolean  @default(false)
   autoCreateDeficientPosts Boolean @default(true)
   isActive            Boolean  @default(true)

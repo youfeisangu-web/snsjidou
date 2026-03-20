@@ -96,6 +96,7 @@ ${serviceInfo}
   { "content": "（投稿文2）", "suggestedTime": "any" }
 ]
 ※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。余計なマークダウンや説明は不要です。配列から始めてください。
+※ 投稿文には絶対に「**太字**」のようなMarkdown記法（アスタリスクを使った強調）を使わないでください。SNSに投稿するプレーンテキストとして書いてください。
 ${contextContext}`
 
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
@@ -174,6 +175,8 @@ ${contextContext}`
         scheduleDate.setHours(9, 0, 0, 0)
         
         const intervalType = profile.postIntervalType || 'uniform'
+        const startHour = (profile as any).postStartHour ?? 9
+        const endHour = (profile as any).postEndHour ?? 21
 
         let availableImages: any[] = []
         if (profile.useImageWarehouse) {
@@ -209,17 +212,17 @@ ${contextContext}`
               finalMinute = Math.floor(Math.random() * 60);
             } else {
               if (intervalType === 'uniform') {
-                const totalAvailableHours = 12 // 9am to 9pm
-                let hourOffset = 9
+                const totalAvailableHours = endHour - startHour
+                let hourOffset = startHour
                 if (countPerDay > 1) {
-                    hourOffset = 9 + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
+                    hourOffset = startHour + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
                 } else {
-                    hourOffset = 12
+                    hourOffset = (startHour + endHour) / 2
                 }
                 finalHour = Math.floor(hourOffset);
                 finalMinute = Math.floor((hourOffset % 1) * 60);
               } else {
-                finalHour = 12 + Math.floor(Math.random() * 6); // default fallback to noon-evening
+                finalHour = startHour + Math.floor(Math.random() * (endHour - startHour))
                 finalMinute = Math.floor(Math.random() * 60)
               }
             }
