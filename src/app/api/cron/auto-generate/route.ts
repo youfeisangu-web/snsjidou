@@ -77,10 +77,28 @@ ${profile.relatedTopics || '（特になし）'}
 
         // 2. Generate with AI if needed
         if (generateCount > 0 && true /* We already checked autoCreateDeficientPosts, wait, actually if we hit this, we need Gemini */) {
+
+          // テンプレートを取得（最後に使った順で循環）
+          const activeTemplates = await (prisma as any).postTemplate.findMany({
+            where: { profileId: profile.id, isActive: true },
+            orderBy: [{ lastUsedAt: 'asc' }, { createdAt: 'asc' }]
+          })
+
+          const templateSection = activeTemplates.length > 0
+            ? `【投稿パターン（型）の指定】
+以下の${activeTemplates.length}種類のパターンを順番に使い回して、それぞれの型の文体・構成・トーンを忠実に再現してください。
+生成する${generateCount}件の投稿を、これらのパターンで均等にカバーするよう分散させてください。
+
+${activeTemplates.map((t: any, i: number) => `--- パターン${i + 1}：${t.name} ---\n（参考例文）\n${t.examplePost}${t.memo ? `\n（ポイント）${t.memo}` : ''}`).join('\n\n')}
+
+上記パターンの【文体・構成・長さ・トーン・スレッド分け方】を参考にしつつ、サービス内容や人格に合わせた独自コンテンツを作成してください。
+`
+            : ''
+
           const sysPrompt = `${customPersona}
 上記の【あなたの人格】として振る舞い、以下のサービス情報を踏まえて投稿を生成してください。
 ${serviceInfo}
-
+${templateSection}
 向こう${targetDays}日分（1日あたり${countPerDay}投稿ペース想定）の独立した投稿内容を考案してください。
 
 【スレッド形式（ツリー投稿）の推奨】
@@ -154,6 +172,17 @@ ${contextContext}`
 
           if (Array.isArray(postsArray)) {
             postsArray.forEach(p => combinedPosts.push({ content: p.content, suggestedTime: p.suggestedTime || 'any' }))
+          }
+
+          // テンプレートの使用記録を更新
+          if (activeTemplates.length > 0) {
+            const now = new Date()
+            for (const t of activeTemplates) {
+              await (prisma as any).postTemplate.update({
+                where: { id: t.id },
+                data: { usageCount: t.usageCount + 1, lastUsedAt: now }
+              })
+            }
           }
         }
 

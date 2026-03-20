@@ -52,6 +52,20 @@ model Profile {
   posts               Post[]
   insights            PageInsight[]
   images              ImageAsset[]
+  templates           PostTemplate[]
+}
+
+model PostTemplate {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name        String   // テンプレート名 (例: "衝撃の事実スレッド型")
+  examplePost String   // 参考例文（バズった投稿をそのままコピペ）
+  memo        String?  // メモ（なぜ良いか、使いどころ等）
+  isActive    Boolean  @default(true)
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
 }
 
 model ImageAsset {

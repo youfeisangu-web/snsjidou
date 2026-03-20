@@ -39,6 +39,11 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<any>(null)
   const [profileStatus, setProfileStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
+  const [templates, setTemplates] = useState<any[]>([])
+  const [newTemplate, setNewTemplate] = useState({ name: '', examplePost: '', memo: '' })
+  const [isAddingTemplate, setIsAddingTemplate] = useState(false)
+  const [templateSaving, setTemplateSaving] = useState(false)
+
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(d => {
       if (d) setGlobalData({ geminiApiKey: d.geminiApiKey || '', imgbbApiKey: d.imgbbApiKey || '' })
@@ -59,6 +64,9 @@ export default function SettingsPage() {
             const p = profiles.find((x: any) => x.id === pid)
             if (p) setProfile(p)
          })
+      })
+      fetch(`/api/templates?profileId=${pid}`).then(r => r.json()).then(data => {
+        if (Array.isArray(data)) setTemplates(data)
       })
     }
   }, [])
@@ -127,6 +135,38 @@ export default function SettingsPage() {
     } catch {
       alert("削除に失敗しました")
     }
+  }
+
+  const handleAddTemplate = async () => {
+    if (!profile || !newTemplate.name || !newTemplate.examplePost) return
+    setTemplateSaving(true)
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: profile.id, ...newTemplate })
+      })
+      const t = await res.json()
+      setTemplates(prev => [...prev, t])
+      setNewTemplate({ name: '', examplePost: '', memo: '' })
+      setIsAddingTemplate(false)
+    } catch { alert('保存に失敗しました') }
+    finally { setTemplateSaving(false) }
+  }
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm('このテンプレートを削除しますか？')) return
+    await fetch(`/api/templates/${id}`, { method: 'DELETE' })
+    setTemplates(prev => prev.filter(t => t.id !== id))
+  }
+
+  const handleToggleTemplate = async (id: string, isActive: boolean) => {
+    await fetch(`/api/templates/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: !isActive })
+    })
+    setTemplates(prev => prev.map(t => t.id === id ? { ...t, isActive: !isActive } : t))
   }
 
   const inputBase = "w-full bg-white border border-slate-300 outline-none focus:border-slate-500 py-2 px-3 text-sm rounded transition-colors"
@@ -388,6 +428,99 @@ export default function SettingsPage() {
                 </button>
                 {profileStatus === 'saved' && <span className="text-sm font-medium text-indigo-600">保存しました！</span>}
                 {profileStatus === 'error' && <span className="text-sm font-medium text-red-500">エラーが発生しました</span>}
+              </div>
+
+              {/* 投稿テンプレート管理 */}
+              <div className="space-y-4 pt-6 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-800">📋 投稿パターン（型）管理</h3>
+                    <p className="text-[11px] text-gray-500 mt-0.5">バズった投稿の例文を登録すると、AI生成時にその型を循環して使います。</p>
+                  </div>
+                  <button
+                    onClick={() => setIsAddingTemplate(v => !v)}
+                    className="px-4 py-2 text-xs font-semibold bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition"
+                  >
+                    {isAddingTemplate ? 'キャンセル' : '＋ 追加'}
+                  </button>
+                </div>
+
+                {isAddingTemplate && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-600 mb-1">型の名前 <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        value={newTemplate.name}
+                        onChange={e => setNewTemplate(v => ({ ...v, name: e.target.value }))}
+                        placeholder="例：衝撃の事実スレッド型、ハウツー連投型"
+                        className="w-full bg-white border border-gray-200 rounded-lg outline-none focus:border-indigo-400 py-2.5 px-3 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-600 mb-1">参考例文（バズった投稿をそのままコピペ） <span className="text-red-400">*</span></label>
+                      <textarea
+                        value={newTemplate.examplePost}
+                        onChange={e => setNewTemplate(v => ({ ...v, examplePost: e.target.value }))}
+                        placeholder="スレッド形式の場合は「|||THREAD|||」で区切って貼ってください。"
+                        className="w-full bg-white border border-gray-200 rounded-lg outline-none focus:border-indigo-400 py-2.5 px-3 text-sm font-light min-h-[160px] leading-relaxed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-600 mb-1">メモ（なぜ良いか、使いどころ等）</label>
+                      <input
+                        type="text"
+                        value={newTemplate.memo}
+                        onChange={e => setNewTemplate(v => ({ ...v, memo: e.target.value }))}
+                        placeholder="例：フック→理由→3つのTips→CTAの型。朝に相性が良い。"
+                        className="w-full bg-white border border-gray-200 rounded-lg outline-none focus:border-indigo-400 py-2.5 px-3 text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddTemplate}
+                      disabled={templateSaving || !newTemplate.name || !newTemplate.examplePost}
+                      className="px-5 py-2.5 bg-indigo-600 text-white text-xs font-semibold rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
+                    >
+                      {templateSaving ? '保存中...' : 'テンプレートを追加'}
+                    </button>
+                  </div>
+                )}
+
+                {templates.length > 0 ? (
+                  <div className="space-y-3">
+                    {templates.map((t, i) => (
+                      <div key={t.id} className={`border rounded-2xl p-4 transition-all ${t.isActive ? 'bg-white border-indigo-100' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">#{i + 1}</span>
+                            <span className="text-sm font-semibold text-gray-800 truncate">{t.name}</span>
+                            {t.usageCount > 0 && <span className="text-[10px] text-gray-400 shrink-0">{t.usageCount}回使用</span>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => handleToggleTemplate(t.id, t.isActive)}
+                              className={`text-[10px] px-3 py-1 rounded-full font-medium transition ${t.isActive ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                            >
+                              {t.isActive ? '有効' : '無効'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTemplate(t.id)}
+                              className="text-[10px] px-3 py-1 rounded-full font-medium bg-red-50 text-red-400 hover:bg-red-100 transition"
+                            >
+                              削除
+                            </button>
+                          </div>
+                        </div>
+                        {t.memo && <p className="text-[11px] text-indigo-500 mb-2">💡 {t.memo}</p>}
+                        <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-3 whitespace-pre-wrap">{t.examplePost}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-2xl">
+                    まだテンプレートがありません。「＋ 追加」からバズった投稿の型を登録してください。
+                  </p>
+                )}
               </div>
 
             </div>
