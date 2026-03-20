@@ -23,8 +23,8 @@ export default function RootLayout({
     <html lang="ja" className={`${inter.variable} antialiased font-sans`}>
       <body className="bg-background text-foreground min-h-screen flex flex-col md:flex-row font-sans selection:bg-primary-200">
         <Navigation />
-        <main className="flex-1 flex flex-col pt-16 md:pt-0">
-          <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-12 md:px-12 md:py-16">
+        <main className="flex-1 flex flex-col pt-14 md:pt-0">
+          <div className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 pb-24 md:px-12 md:py-16 md:pb-16">
             {children}
           </div>
         </main>
