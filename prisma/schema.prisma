@@ -41,6 +41,7 @@ model Profile {
   relatedTopics       String?  
   postCountPerDay     Int      @default(3)
   postIntervalType    String   @default("uniform") // "uniform", "random"
+  postLength          String   @default("normal") // "long", "short", "normal", "random"
   useImageWarehouse   Boolean  @default(false)
   autoCreateDeficientPosts Boolean @default(true)
   isActive            Boolean  @default(true)

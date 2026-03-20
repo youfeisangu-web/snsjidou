@@ -21,6 +21,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         isActive: data.isActive,
         postCountPerDay: data.postCountPerDay !== undefined ? parseInt(data.postCountPerDay, 10) : undefined,
         postIntervalType: data.postIntervalType,
+        postLength: data.postLength,
         autoCreateDeficientPosts: data.autoCreateDeficientPosts,
         useImageWarehouse: data.useImageWarehouse
       }

@@ -77,11 +77,21 @@ ${profile.relatedTopics || '（特になし）'}
 
         // 2. Generate with AI if needed
         if (generateCount > 0 && true /* We already checked autoCreateDeficientPosts, wait, actually if we hit this, we need Gemini */) {
-          const sysPrompt = `${customPersona}
+          const lengthInstruction = profile.postLength === 'short' 
+          ? '【文字数の指定】\n長文にはせず、短文（100〜150文字程度）でサクッと読める簡潔な投稿を中心に作成してください。'
+          : profile.postLength === 'long'
+          ? '【文字数の指定】\n長文で読み応えのある投稿を作成してください。必要に応じてスレッド形式を活用し、1つのテーマを深く掘り下げてください。'
+          : profile.postLength === 'random'
+          ? '【文字数の指定】\n短い一言投稿や、長く語るスレッド投稿など、長さを意図的にバラバラに（ランダムに）して生成してください。'
+          : '【文字数の指定】\n一般的なユーザーが読みやすい標準的な長さ（長すぎず短すぎず）を意識してください。必要に応じてスレッドを活用してください。';
+
+        const sysPrompt = `${customPersona}
 上記の【あなたの人格】として振る舞い、以下のサービス情報を踏まえて投稿を生成してください。
 ${serviceInfo}
 
 向こう${targetDays}日分（1日あたり${countPerDay}投稿ペース想定）の独立した投稿内容を考案してください。
+
+${lengthInstruction}
 
 【スレッド形式（ツリー投稿）の推奨】
 長文になる場合や、クイズ形式、結論を焦らしたい場合は、1つの投稿にまとめず、Threadsでよくある「スレッド形式（リプライで続きを書く）」にしてください。

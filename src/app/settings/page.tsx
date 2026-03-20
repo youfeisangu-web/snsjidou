@@ -292,6 +292,18 @@ export default function SettingsPage() {
                       <option value="random">まちまち（ランダム）</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-gray-500 mb-1">文章の長さ</label>
+                    <select
+                      value={profile.postLength || 'normal'} onChange={e => updateProfileLocal('postLength', e.target.value)}
+                      className={inputBase}
+                    >
+                      <option value="normal">普通</option>
+                      <option value="short">短い（短文）</option>
+                      <option value="long">長い（長文・スレッド形式）</option>
+                      <option value="random">おまかせ（ランダム）</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-4 mt-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
