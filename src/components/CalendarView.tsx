@@ -18,7 +18,33 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
   const [postStartHour, setPostStartHour] = useState(profile?.postStartHour ?? 9)
   const [postEndHour, setPostEndHour] = useState(profile?.postEndHour ?? 21)
   const [isRescheduling, setIsRescheduling] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+
+  const handleRestoreToDraft = async () => {
+    if (!profile) return;
+    if (!confirm('実際にThreadsに投稿されていない「投稿済み」の投稿を、すべて在庫（ドラフト）に戻しますか？')) return;
+    setIsRestoring(true)
+    try {
+      const res = await fetch('/api/posts/restore-to-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: profile.id })
+      })
+      if (res.ok) {
+        const d = await res.json()
+        alert(`${d.restoredCount}件の投稿を在庫に戻しました。`)
+        window.location.reload()
+      } else {
+        const d = await res.json()
+        alert('エラー: ' + d.error)
+      }
+    } catch (e: any) {
+      alert('エラー: ' + e.message)
+    } finally {
+      setIsRestoring(false)
+    }
+  }
 
   const handleReschedule = async () => {
     if (!profile) return;
@@ -201,14 +227,24 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               </div>
             </div>
           </div>
-          <button 
-            onClick={handleReschedule} 
-            disabled={isRescheduling}
-            className="w-full md:w-auto px-6 py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRescheduling ? 'animate-spin' : ''}`} />
-            {isRescheduling ? '再振り分け中...' : '変更して再振り分け'}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleReschedule}
+              disabled={isRescheduling || isRestoring}
+              className="w-full md:w-auto px-6 py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRescheduling ? 'animate-spin' : ''}`} />
+              {isRescheduling ? '再振り分け中...' : '変更して再振り分け'}
+            </button>
+            <button
+              onClick={handleRestoreToDraft}
+              disabled={isRestoring || isRescheduling}
+              className="w-full md:w-auto px-6 py-3 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+            >
+              <Archive className={`w-4 h-4 ${isRestoring ? 'animate-pulse' : ''}`} />
+              {isRestoring ? '在庫に戻し中...' : '未投稿を在庫に戻す'}
+            </button>
+          </div>
         </div>
       )}
 

@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     })
 
     const scheduledPosts = await prisma.post.findMany({
-      where: { profileId, status: 'scheduled' },
+      where: { profileId, status: { in: ['scheduled', 'draft'] } },
       orderBy: { scheduledAt: 'asc' }
     })
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 
         await prisma.post.update({
           where: { id: postData.id },
-          data: { scheduledAt: scheduledFor }
+          data: { scheduledAt: scheduledFor, status: 'scheduled' }
         })
     }
 

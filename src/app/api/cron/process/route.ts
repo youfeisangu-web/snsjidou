@@ -19,7 +19,8 @@ export async function GET() {
 
     for (const post of pendingPosts) {
       let threadsId = post.threadsId
-      let newStatus = 'published'
+      let newStatus = 'failed'
+      let wasPosted = false
 
       const profile = post.profile
       if (!profile) {
@@ -128,11 +129,14 @@ export async function GET() {
             }
           }
           threadsId = firstPublishedId
+          if (newStatus !== 'failed') wasPosted = true
         } catch (err) {
           console.error(err)
           newStatus = 'failed'
         }
       }
+
+      if (wasPosted) newStatus = 'published'
 
       await prisma.post.update({
         where: { id: post.id },

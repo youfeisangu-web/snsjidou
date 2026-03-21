@@ -327,3 +327,8 @@ ${contextContext}`
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }
+
+// Vercel cron jobs send GET requests, so we need a GET handler
+export async function GET(req: Request) {
+  return POST(req)
+}
