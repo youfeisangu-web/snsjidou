@@ -205,7 +205,8 @@ ${contextContext}`
         
         const intervalType = profile.postIntervalType || 'uniform'
         const startHour = (profile as any).postStartHour ?? 9
-        const endHour = (profile as any).postEndHour ?? 21
+        const rawEndHour = (profile as any).postEndHour ?? 21
+        const endHour = rawEndHour > startHour ? rawEndHour : startHour + 12
 
         let availableImages: any[] = []
         if (profile.useImageWarehouse) {

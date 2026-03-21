@@ -22,6 +22,10 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
 
   const handleReschedule = async () => {
     if (!profile) return;
+    if (postEndHour <= postStartHour) {
+      alert(`エラー: 投稿終了時刻（${String(postEndHour).padStart(2,'0')}:00）は開始時刻（${String(postStartHour).padStart(2,'0')}:00）より後に設定してください。`)
+      return
+    }
     if (!confirm('現在の設定で予約済みの投稿を再振り分け（リスケジュール）しますか？\n※既に過ぎた投稿や公開済みのものは変更されません。')) return;
     
     setIsRescheduling(true)
