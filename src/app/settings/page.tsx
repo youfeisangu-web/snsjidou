@@ -89,7 +89,7 @@ export default function SettingsPage() {
   }
 
   const handleCreateProfile = async () => {
-    if (!confirm('新しいアカウントを追加しますか？（作成後、左のメニューから切り替えてください）')) return
+    if (!confirm('新しいアカウントを追加しますか？（作成後、画面上部のアカウントボタンから切り替えてください）')) return
     try {
       const res = await fetch('/api/profiles', {
         method: 'POST',
@@ -527,7 +527,7 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="text-center py-16 text-gray-400 text-sm border border-dashed border-gray-200 rounded-2xl px-6">
-            左のメニューからアカウントを選択するか、全体設定横の「新規追加」を押してください。
+            画面上部のアカウントボタンで切り替えるか、上の「新規アカウントを追加」を押してください。
           </div>
         )}
       </div>
