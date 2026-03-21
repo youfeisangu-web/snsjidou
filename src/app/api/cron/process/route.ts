@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { toThreadNodes } from '@/lib/thread-utils'
 
 export async function GET() {
   try {
@@ -31,7 +32,7 @@ export async function GET() {
       // Threads
       if ((post.platform === 'threads' || post.platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
         try {
-          const threadNodes = post.content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean).map((s: string) => s.length > 500 ? s.slice(0, 500) : s)
+          const threadNodes = toThreadNodes(post.content)
           
           let firstPublishedId = null
           let lastPublishedId = null

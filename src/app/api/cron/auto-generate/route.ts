@@ -115,6 +115,7 @@ ${templateSection}
 ]
 ※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。余計なマークダウンや説明は不要です。配列から始めてください。
 ※ 投稿文には絶対に「**太字**」のようなMarkdown記法（アスタリスクを使った強調）を使わないでください。SNSに投稿するプレーンテキストとして書いてください。
+※ 【厳守】|||THREAD|||で区切られた各投稿は必ず500文字以内にしてください。500文字を超える場合は、|||THREAD|||でさらに分割してください。途中で切れた文章は絶対にNGです。
 ${contextContext}`
 
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${settings.geminiApiKey}`, {

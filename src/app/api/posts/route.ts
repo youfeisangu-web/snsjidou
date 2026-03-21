@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import fs from 'fs'
 import path from 'path'
+import { toThreadNodes } from '@/lib/thread-utils'
 
 export async function POST(req: Request) {
   try {
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
         if ((platform === 'threads' || platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
           status = 'published'
           try {
-            const threadNodes = content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean).map(s => s.length > 500 ? s.slice(0, 500) : s)
+            const threadNodes = toThreadNodes(content)
             
             let firstPublishedId = null
             let lastPublishedId = null

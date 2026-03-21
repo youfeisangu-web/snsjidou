@@ -60,6 +60,7 @@ ${successRule}
   { "content": "（投稿文2）", "suggestedTime": "any" }
 ]
 ※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。
+※ 【厳守】|||THREAD|||で区切られた各投稿は必ず500文字以内にしてください。500文字を超える場合は、|||THREAD|||でさらに分割してください。途中で切れた文章は絶対にNGです。
 余計なマークダウンや説明は不要です。
 ${contextContext}`
 
