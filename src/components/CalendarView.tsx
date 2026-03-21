@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday } from 'date-fns'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Clock, AtSign, Rss, Archive, RefreshCw, X } from 'lucide-react'
 
@@ -20,6 +20,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
   const [isRescheduling, setIsRescheduling] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [showPublished, setShowPublished] = useState(false)
 
   const handleRestoreToDraft = async () => {
     if (!profile) return;
@@ -136,7 +137,8 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
       const cloneDay = day
       
       const dayPosts = posts.filter(post => {
-        const postDate = new Date(post.publishedAt || post.scheduledAt || Date.now())
+        if (post.status === 'published') return false
+        const postDate = new Date(post.scheduledAt || post.publishedAt || Date.now())
         return isSameDay(postDate, cloneDay)
       })
 
@@ -191,6 +193,22 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
       </div>
     )
     days = []
+  }
+
+  // 今後7日分の予定投稿をグループ化して表示するデータ
+  const upcomingScheduled = posts
+    .filter(p => p.status === 'scheduled' && p.scheduledAt)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+
+  const upcomingByDay: { label: string, date: Date, posts: Post[] }[] = []
+  const today = startOfDay(new Date())
+  for (let d = 0; d < 7; d++) {
+    const day = addDays(today, d)
+    const dayPosts = upcomingScheduled.filter(p => isSameDay(new Date(p.scheduledAt), day))
+    if (dayPosts.length > 0) {
+      const label = d === 0 ? '今日' : d === 1 ? '明日' : format(day, 'M/d（E）', { locale: ja })
+      upcomingByDay.push({ label, date: day, posts: dayPosts })
+    }
   }
 
   return (
@@ -248,6 +266,43 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
         </div>
       )}
 
+      {/* Upcoming Schedule Timeline */}
+      {upcomingByDay.length > 0 && (
+        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-indigo-500" />
+            今後の投稿スケジュール
+            <span className="text-xs font-normal text-gray-400 ml-1">（{upcomingScheduled.length}件予約中）</span>
+          </h3>
+          <div className="space-y-4">
+            {upcomingByDay.map(({ label, date, posts: dayPosts }) => (
+              <div key={date.toISOString()}>
+                <div className="text-xs font-semibold text-indigo-600 mb-2 flex items-center gap-2">
+                  <span className="bg-indigo-50 px-2 py-0.5 rounded-full">{label}</span>
+                  <span className="text-gray-400 font-normal">{dayPosts.length}件</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dayPosts.map(post => (
+                    <div
+                      key={post.id}
+                      onClick={() => handlePostClick(post)}
+                      className="flex items-center gap-2 px-3 py-2 bg-indigo-50/60 border border-indigo-100 rounded-xl cursor-pointer hover:bg-indigo-100 transition-all group max-w-xs"
+                    >
+                      <span className="text-xs font-bold text-indigo-600 whitespace-nowrap">
+                        {format(new Date(post.scheduledAt), 'HH:mm')}
+                      </span>
+                      <span className="text-xs text-gray-600 truncate group-hover:text-gray-900 transition-colors">
+                        {post.content.replace(/\|\|\|THREAD\|\|\|/g, ' ').slice(0, 30)}{post.content.length > 30 ? '…' : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -299,6 +354,39 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Published Posts Section */}
+      {posts.filter(p => p.status === 'published').length > 0 && (
+        <div className="border-t border-gray-100">
+          <button
+            onClick={() => setShowPublished(v => !v)}
+            className="w-full px-6 py-4 flex items-center justify-between text-sm text-gray-500 hover:bg-gray-50/50 transition-colors"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <Rss className="w-4 h-4 text-green-500" />
+              投稿済みを見る
+              <span className="text-xs text-gray-400 font-normal">{posts.filter(p => p.status === 'published').length}件</span>
+            </span>
+            <ChevronRight className={`w-4 h-4 transition-transform ${showPublished ? 'rotate-90' : ''}`} />
+          </button>
+          {showPublished && (
+            <div className="px-6 pb-6 bg-gray-50/30">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {posts.filter(p => p.status === 'published').sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()).map(post => (
+                  <div key={post.id} className="p-4 bg-white border border-gray-200 rounded-2xl flex flex-col gap-2">
+                    <div className="text-xs text-gray-600 leading-relaxed line-clamp-4">
+                      {post.content}
+                    </div>
+                    <div className="text-[10px] text-gray-400">
+                      {post.publishedAt ? format(new Date(post.publishedAt), 'M/d HH:mm') : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

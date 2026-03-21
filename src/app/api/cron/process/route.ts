@@ -59,12 +59,13 @@ export async function GET() {
           
           let firstPublishedId = null
           let lastPublishedId = null
+          let postingFailed = false
 
           for (let i = 0; i < threadNodes.length; i++) {
             const nodeText = threadNodes[i]
             const isFirstNode = (i === 0)
             const hasImage = isFirstNode && post.imageUrl
-            
+
             const payload: any = {
               media_type: hasImage ? 'IMAGE' : 'TEXT',
               text: nodeText,
@@ -81,7 +82,7 @@ export async function GET() {
               body: JSON.stringify(payload)
             })
             const creationData = await creationRes.json()
-            
+
             if (creationData.id) {
               // Poll container status
               let isFinished = false;
@@ -124,19 +125,20 @@ export async function GET() {
               if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 3000));
             } else {
               console.error('Threads API Creation Error', creationData)
-              newStatus = 'failed'
+              postingFailed = true
               break
             }
           }
           threadsId = firstPublishedId
-          if (newStatus !== 'failed') wasPosted = true
+          if (firstPublishedId && !postingFailed) wasPosted = true
         } catch (err) {
-          console.error(err)
+          console.error('Threads posting error for post', post.id, err)
           newStatus = 'failed'
         }
       }
 
       if (wasPosted) newStatus = 'published'
+      else if (newStatus !== 'failed') newStatus = 'failed'
 
       await prisma.post.update({
         where: { id: post.id },
