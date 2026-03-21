@@ -419,14 +419,10 @@ export default function SettingsPage() {
                           <label className="block text-[10px] font-semibold tracking-widest text-indigo-500 uppercase">🤖 スワイプで学習した『好み』 (自動更新)</label>
                           <button
                             type="button"
-                            onClick={() => {
-                              if(confirm('学習した好みをリセットしますか？')) {
-                                updateProfileLocal('aiPreferenceRules', '');
-                              }
-                            }}
+                            onClick={() => updateProfileLocal('aiPreferenceRules', '')}
                             className="text-[10px] text-gray-400 hover:text-red-500 transition-colors"
                           >
-                            リセット
+                            直ちにリセット
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed min-h-[60px]">
@@ -438,14 +434,10 @@ export default function SettingsPage() {
                           <label className="block text-[10px] font-semibold tracking-widest text-pink-500 uppercase">📈 バズ要因・成功法則 (自動更新)</label>
                           <button
                             type="button"
-                            onClick={() => {
-                              if(confirm('学習したバズ要因をリセットしますか？')) {
-                                updateProfileLocal('successFactors', '');
-                              }
-                            }}
+                            onClick={() => updateProfileLocal('successFactors', '')}
                             className="text-[10px] text-gray-400 hover:text-red-500 transition-colors"
                           >
-                            リセット
+                            直ちにリセット
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed min-h-[60px]">
