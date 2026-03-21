@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const maxDuration = 60; // Vercel Timeout対策
+
 export async function POST(req: Request) {
   try {
     const { prompt, profileId, image } = await req.json()

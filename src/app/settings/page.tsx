@@ -413,20 +413,46 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
-                      <label className="block text-[10px] font-semibold tracking-widest text-indigo-500 mb-2 uppercase">🤖 スワイプで学習した『好み』 (自動更新)</label>
-                      <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed min-h-[60px]">
-                        {profile.aiPreferenceRules || '(まだスワイプによる好みが学習されていません)'}
-                      </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[10px] font-semibold tracking-widest text-indigo-500 uppercase">🤖 スワイプで学習した『好み』 (自動更新)</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if(confirm('学習した好みをリセットしますか？')) {
+                                updateProfileLocal('aiPreferenceRules', '');
+                              }
+                            }}
+                            className="text-[10px] text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            リセット
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed min-h-[60px]">
+                          {profile.aiPreferenceRules || '(まだスワイプによる好みが学習されていません)'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[10px] font-semibold tracking-widest text-pink-500 uppercase">📈 バズ要因・成功法則 (自動更新)</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if(confirm('学習したバズ要因をリセットしますか？')) {
+                                updateProfileLocal('successFactors', '');
+                              }
+                            }}
+                            className="text-[10px] text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            リセット
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed min-h-[60px]">
+                          {profile.successFactors || '(まだバズ要因が抽出されていません)'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
-                      <label className="block text-[10px] font-semibold tracking-widest text-pink-500 mb-2 uppercase">📈 バズ要因・成功法則 (自動更新)</label>
-                      <p className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed min-h-[60px]">
-                        {profile.successFactors || '(まだバズ要因が抽出されていません)'}
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
 
