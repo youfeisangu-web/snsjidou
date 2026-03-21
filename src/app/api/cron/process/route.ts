@@ -31,7 +31,7 @@ export async function GET() {
       // Threads
       if ((post.platform === 'threads' || post.platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
         try {
-          const threadNodes = post.content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean)
+          const threadNodes = post.content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean).map((s: string) => s.length > 500 ? s.slice(0, 500) : s)
           
           let firstPublishedId = null
           let lastPublishedId = null

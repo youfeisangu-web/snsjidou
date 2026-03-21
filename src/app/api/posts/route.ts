@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         if ((platform === 'threads' || platform === 'both') && profile.threadsUserId && profile.threadsAccessToken) {
           status = 'published'
           try {
-            const threadNodes = content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean)
+            const threadNodes = content.split(/\|\|\|THREAD\|\|\|/).map(s => s.trim()).filter(Boolean).map(s => s.length > 500 ? s.slice(0, 500) : s)
             
             let firstPublishedId = null
             let lastPublishedId = null
