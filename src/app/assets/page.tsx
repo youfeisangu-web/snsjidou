@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { UploadCloud, Image as ImageIcon, Trash2, CheckCircle2 } from 'lucide-react'
+import { UploadCloud, Image as ImageIcon, Trash2, CheckCircle2, Loader2 } from 'lucide-react'
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [dialog, setDialog] = useState<{type: 'confirm'|'alert', message: string, onConfirm?: () => void} | null>(null)
   
   const [selectedProfileId, setSelectedProfileId] = useState<string>('')
 
@@ -54,7 +55,7 @@ export default function AssetsPage() {
       if (!res.ok) throw new Error('Upload failed')
       fetchAssets()
     } catch (error) {
-      alert('アップロードに失敗しました')
+      setDialog({ type: 'alert', message: 'アップロードに失敗しました' })
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -62,14 +63,19 @@ export default function AssetsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('この画像を倉庫から削除してよろしいですか？')) return
-    try {
-      const res = await fetch(`/api/assets/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Delete failed')
-      setAssets(assets.filter(a => a.id !== id))
-    } catch {
-      alert('削除に失敗しました')
-    }
+    setDialog({
+      type: 'confirm',
+      message: 'この画像を倉庫から削除してよろしいですか？',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/assets/${id}`, { method: 'DELETE' })
+          if (!res.ok) throw new Error('Delete failed')
+          setAssets(prev => prev.filter(a => a.id !== id))
+        } catch {
+          setDialog({ type: 'alert', message: '削除に失敗しました' })
+        }
+      }
+    })
   }
 
   return (
@@ -81,7 +87,7 @@ export default function AssetsPage() {
         </div>
         <div>
           <label className={`cursor-pointer flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-md shadow-indigo-600/20 text-xs font-medium tracking-widest uppercase ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-            <UploadCloud className={`w-4 h-4 ${uploading ? 'animate-bounce' : ''}`} />
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
             <span>{uploading ? 'アップロード中...' : '画像をストックする'}</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
           </label>
@@ -89,7 +95,10 @@ export default function AssetsPage() {
       </header>
       
       {loading ? (
-        <div className="text-center py-20 text-gray-400">読み込み中...</div>
+        <div className="flex flex-col items-center justify-center py-32 text-gray-400 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
+          <span className="text-sm">読み込み中...</span>
+        </div>
       ) : assets.length === 0 ? (
         <div className="text-center py-32 rounded-3xl border border-dashed border-gray-200 bg-gray-50/50">
           <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -121,6 +130,38 @@ export default function AssetsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {dialog && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              {dialog.type === 'confirm' ? '確認' : 'お知らせ'}
+            </h3>
+            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed mb-6">
+              {dialog.message}
+            </p>
+            <div className="flex justify-end gap-3">
+              {dialog.type === 'confirm' && (
+                <button
+                  onClick={() => setDialog(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  キャンセル
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (dialog.onConfirm) dialog.onConfirm()
+                  setDialog(null)
+                }}
+                className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full shadow-md transition-all"
+              >
+                {dialog.type === 'confirm' ? 'はい' : 'OK'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

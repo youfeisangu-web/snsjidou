@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 function SecretInput({ value, onChange, placeholder, className }: {
   value: string
@@ -34,6 +34,7 @@ function SecretInput({ value, onChange, placeholder, className }: {
 export default function SettingsPage() {
   const [globalData, setGlobalData] = useState({ geminiApiKey: '', imgbbApiKey: '' })
   const [globalStatus, setGlobalStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [dialog, setDialog] = useState<{type: 'confirm'|'alert', message: string, onConfirm?: () => void} | null>(null)
 
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null)
   const [profile, setProfile] = useState<any>(null)
@@ -89,19 +90,24 @@ export default function SettingsPage() {
   }
 
   const handleCreateProfile = async () => {
-    if (!confirm('新しいアカウントを追加しますか？（作成後、画面上部のアカウントボタンから切り替えてください）')) return
-    try {
-      const res = await fetch('/api/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: `新しいアカウント` }),
-      })
-      const newP = await res.json()
-      document.cookie = `activeProfileId=${newP.id}; path=/; max-age=31536000`
-      window.location.reload()
-    } catch {
-      alert("エラーが発生しました")
-    }
+    setDialog({
+      type: 'confirm',
+      message: '新しいアカウントを追加しますか？（作成後、画面上部のアカウントボタンから切り替えてください）',
+      onConfirm: async () => {
+        try {
+          const res = await fetch('/api/profiles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: `新しいアカウント` }),
+          })
+          const newP = await res.json()
+          document.cookie = `activeProfileId=${newP.id}; path=/; max-age=31536000`
+          window.location.reload()
+        } catch {
+          setDialog({ type: 'alert', message: 'エラーが発生しました' })
+        }
+      }
+    })
   }
 
   const updateProfileLocal = (key: string, value: any) => {
@@ -127,14 +133,19 @@ export default function SettingsPage() {
 
   const handleDeleteProfile = async () => {
     if (!profile) return
-    if (!confirm('現在のアカウントを完全に削除してよろしいですか？（元には戻せません）\n削除後、再度ページを読み込んで別のアカウントを選択してください。')) return
-    try {
-      await fetch(`/api/profiles/${profile.id}`, { method: 'DELETE' })
-      document.cookie = 'activeProfileId=; path=/; max-age=0'
-      window.location.reload()
-    } catch {
-      alert("削除に失敗しました")
-    }
+    setDialog({
+      type: 'confirm',
+      message: '現在のアカウントを完全に削除してよろしいですか？（元には戻せません）\n削除後、再度ページを読み込んで別のアカウントを選択してください。',
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/profiles/${profile.id}`, { method: 'DELETE' })
+          document.cookie = 'activeProfileId=; path=/; max-age=0'
+          window.location.reload()
+        } catch {
+          setDialog({ type: 'alert', message: '削除に失敗しました' })
+        }
+      }
+    })
   }
 
   const handleAddTemplate = async () => {
@@ -150,14 +161,19 @@ export default function SettingsPage() {
       setTemplates(prev => [...prev, t])
       setNewTemplate({ name: '', examplePost: '', memo: '' })
       setIsAddingTemplate(false)
-    } catch { alert('保存に失敗しました') }
+    } catch { setDialog({ type: 'alert', message: '保存に失敗しました' }) }
     finally { setTemplateSaving(false) }
   }
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!confirm('このテンプレートを削除しますか？')) return
-    await fetch(`/api/templates/${id}`, { method: 'DELETE' })
-    setTemplates(prev => prev.filter(t => t.id !== id))
+    setDialog({
+      type: 'confirm',
+      message: 'このテンプレートを削除しますか？',
+      onConfirm: async () => {
+        await fetch(`/api/templates/${id}`, { method: 'DELETE' })
+        setTemplates(prev => prev.filter(t => t.id !== id))
+      }
+    })
   }
 
   const handleToggleTemplate = async (id: string, isActive: boolean) => {
@@ -216,6 +232,7 @@ export default function SettingsPage() {
             disabled={globalStatus === 'saving'}
             className="px-6 py-3 bg-gray-900 text-white text-xs uppercase tracking-widest font-medium hover:bg-black transition-colors disabled:opacity-50"
           >
+            {globalStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin inline-block mr-2 -ml-2" />}
             {globalStatus === 'saving' ? '保存中...' : 'システム設定を保存'}
           </button>
           {globalStatus === 'saved' && <span className="text-sm font-light text-primary-600 animate-in fade-in">保存しました。</span>}
@@ -452,10 +469,11 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSaveProfile}
                   disabled={profileStatus === 'saving'}
-                  className="px-6 py-3 bg-indigo-600 text-white text-xs font-semibold rounded-full hover:bg-indigo-700 transition shadow-md shadow-indigo-600/20 disabled:opacity-50"
-                >
-                  {profileStatus === 'saving' ? '保存中...' : 'アカウント設定を保存'}
-                </button>
+                  className="px-6 py-3 bg-indigo-600 text-white text-xs font-semibold rounded-full hover:bg-indigo-700 transition shadow-md shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2"
+              >
+                {profileStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
+                {profileStatus === 'saving' ? '保存中...' : 'アカウント設定を保存'}
+              </button>
                 {profileStatus === 'saved' && <span className="text-sm font-medium text-indigo-600">保存しました！</span>}
                 {profileStatus === 'error' && <span className="text-sm font-medium text-red-500">エラーが発生しました</span>}
               </div>
@@ -511,6 +529,7 @@ export default function SettingsPage() {
                       disabled={templateSaving || !newTemplate.name || !newTemplate.examplePost}
                       className="px-5 py-2.5 bg-indigo-600 text-white text-xs font-semibold rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
                     >
+                      {templateSaving && <Loader2 className="w-4 h-4 animate-spin inline-block mr-1 -ml-1 align-sub" />}
                       {templateSaving ? '保存中...' : 'テンプレートを追加'}
                     </button>
                   </div>
@@ -561,6 +580,38 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {dialog && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              {dialog.type === 'confirm' ? '確認' : 'お知らせ'}
+            </h3>
+            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed mb-6">
+              {dialog.message}
+            </p>
+            <div className="flex justify-end gap-3">
+              {dialog.type === 'confirm' && (
+                <button
+                  onClick={() => setDialog(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  キャンセル
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (dialog.onConfirm) dialog.onConfirm()
+                  setDialog(null)
+                }}
+                className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full shadow-md transition-all"
+              >
+                {dialog.type === 'confirm' ? 'はい' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

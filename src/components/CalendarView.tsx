@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Clock, AtSign, Rss, Archive, RefreshCw, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, AtSign, Rss, Archive, RefreshCw, X, Loader2 } from 'lucide-react'
 
 type Post = any
 
@@ -21,64 +21,73 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
   const [isRestoring, setIsRestoring] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [showPublished, setShowPublished] = useState(false)
+  const [dialog, setDialog] = useState<{type: 'confirm' | 'alert', message: string, onConfirm?: () => void} | null>(null)
 
   const handleRestoreToDraft = async () => {
     if (!profile) return;
-    if (!confirm('実際にThreadsに投稿されていない「投稿済み」の投稿を、すべて在庫（ドラフト）に戻しますか？')) return;
-    setIsRestoring(true)
-    try {
-      const res = await fetch('/api/posts/restore-to-draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId: profile.id })
-      })
-      if (res.ok) {
-        const d = await res.json()
-        alert(`${d.restoredCount}件の投稿を在庫に戻しました。`)
-        window.location.reload()
-      } else {
-        const d = await res.json()
-        alert('エラー: ' + d.error)
+    setDialog({
+      type: 'confirm',
+      message: '実際にThreadsに投稿されていない「投稿済み」の投稿を、すべて在庫（ドラフト）に戻しますか？',
+      onConfirm: async () => {
+        setIsRestoring(true)
+        try {
+          const res = await fetch('/api/posts/restore-to-draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profileId: profile.id })
+          })
+          if (res.ok) {
+            const d = await res.json()
+            setDialog({ type: 'alert', message: `${d.restoredCount}件の投稿を在庫に戻しました。`, onConfirm: () => window.location.reload() })
+          } else {
+            const d = await res.json()
+            setDialog({ type: 'alert', message: 'エラー: ' + d.error })
+          }
+        } catch (e: any) {
+          setDialog({ type: 'alert', message: 'エラー: ' + e.message })
+        } finally {
+          setIsRestoring(false)
+        }
       }
-    } catch (e: any) {
-      alert('エラー: ' + e.message)
-    } finally {
-      setIsRestoring(false)
-    }
+    })
   }
 
   const handleReschedule = async () => {
     if (!profile) return;
     if (postEndHour <= postStartHour) {
-      alert(`エラー: 投稿終了時刻（${String(postEndHour).padStart(2,'0')}:00）は開始時刻（${String(postStartHour).padStart(2,'0')}:00）より後に設定してください。`)
+      setDialog({ type: 'alert', message: `エラー: 投稿終了時刻（${String(postEndHour).padStart(2,'0')}:00）は開始時刻（${String(postStartHour).padStart(2,'0')}:00）より後に設定してください。` })
       return
     }
-    if (!confirm('現在の設定で予約済みの投稿を再振り分け（リスケジュール）しますか？\n※既に過ぎた投稿や公開済みのものは変更されません。')) return;
-    
-    setIsRescheduling(true)
-    try {
-      const res = await fetch('/api/posts/reschedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: profile.id,
-          postCountPerDay,
-          postIntervalType,
-          postStartHour,
-          postEndHour,
-        })
-      })
-      if (res.ok) {
-        window.location.reload()
-      } else {
-        const d = await res.json()
-        alert('エラー: ' + d.error)
+    setDialog({
+      type: 'confirm',
+      message: '現在の設定で予約済みの投稿を再振り分け（リスケジュール）しますか？\n※既に過ぎた投稿や公開済みのものは変更されません。',
+      onConfirm: async () => {
+        setIsRescheduling(true)
+        try {
+          const res = await fetch('/api/posts/reschedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              profileId: profile.id,
+              postCountPerDay,
+              postIntervalType,
+              postStartHour,
+              postEndHour,
+            })
+          })
+          if (res.ok) {
+            window.location.reload()
+          } else {
+            const d = await res.json()
+            setDialog({ type: 'alert', message: 'エラー: ' + d.error })
+          }
+        } catch (e: any) {
+          setDialog({ type: 'alert', message: 'エラー: ' + e.message })
+        } finally {
+          setIsRescheduling(false)
+        }
       }
-    } catch (e: any) {
-      alert('エラー: ' + e.message)
-    } finally {
-      setIsRescheduling(false)
-    }
+    })
   }
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -111,10 +120,10 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
         window.location.reload();
       } else {
         const d = await res.json()
-        alert('エラー: ' + d.error)
+        setDialog({ type: 'alert', message: 'エラー: ' + d.error })
       }
     } catch (e: any) {
-      alert('エラー: ' + e.message)
+      setDialog({ type: 'alert', message: 'エラー: ' + e.message })
     } finally {
       setIsSaving(false);
     }
@@ -251,7 +260,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               disabled={isRescheduling || isRestoring}
               className="w-full md:w-auto px-6 py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${isRescheduling ? 'animate-spin' : ''}`} />
+              {isRescheduling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               {isRescheduling ? '再振り分け中...' : '変更して再振り分け'}
             </button>
             <button
@@ -259,7 +268,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               disabled={isRestoring || isRescheduling}
               className="w-full md:w-auto px-6 py-3 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
-              <Archive className={`w-4 h-4 ${isRestoring ? 'animate-pulse' : ''}`} />
+              {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
               {isRestoring ? '在庫に戻し中...' : '未投稿を在庫に戻す'}
             </button>
           </div>
@@ -429,6 +438,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
                 disabled={isSaving}
                 className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
               >
+                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? '保存中...' : '変更を保存'}
               </button>
             </div>
@@ -480,6 +490,38 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               }).length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-8">この日の投稿はありません。</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dialog && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              {dialog.type === 'confirm' ? '確認' : 'お知らせ'}
+            </h3>
+            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed mb-6">
+              {dialog.message}
+            </p>
+            <div className="flex justify-end gap-3">
+              {dialog.type === 'confirm' && (
+                <button
+                  onClick={() => setDialog(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  キャンセル
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (dialog.onConfirm) dialog.onConfirm()
+                  setDialog(null)
+                }}
+                className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full shadow-md transition-all"
+              >
+                {dialog.type === 'confirm' ? 'はい' : 'OK'}
+              </button>
             </div>
           </div>
         </div>
