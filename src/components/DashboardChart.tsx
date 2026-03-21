@@ -38,26 +38,28 @@ export function DashboardChart({
   thData: InsightData[] 
 }) {
 
-  // Generate recent 7 days labels
-  const labels = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (6 - i))
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  })
+  const hasData = thData.length > 0
+  const labels = hasData
+    ? thData.map(d => new Date(d.recordedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }))
+    : Array.from({ length: 7 }).map((_, i) => {
+        const d = new Date()
+        d.setDate(d.getDate() - (6 - i))
+        return d.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+      })
 
-  // Dummy values based on real data or fallback to nice looking curve
   const data = {
     labels,
     datasets: [
       {
-        label: 'Threads反応数',
-        data: thData.length ? thData.map(d => d.totalEngagement) : labels.map(() => Math.floor(Math.random() * 500)),
-        borderColor: 'rgb(0, 0, 0)',
-        backgroundColor: 'transparent',
+        label: 'フォロワー数',
+        data: hasData ? thData.map(d => d.followersCount) : [],
+        borderColor: 'rgb(99, 102, 241)',
+        backgroundColor: 'rgba(99, 102, 241, 0.05)',
         tension: 0.4,
         borderWidth: 2,
-        pointRadius: 0,
+        pointRadius: hasData ? 3 : 0,
         pointHitRadius: 20,
+        fill: true,
       }
     ],
   }
