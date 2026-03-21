@@ -20,6 +20,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
   const [isRescheduling, setIsRescheduling] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [showPublished, setShowPublished] = useState(false)
 
   const handleRestoreToDraft = async () => {
     if (!profile) return;
@@ -136,7 +137,8 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
       const cloneDay = day
       
       const dayPosts = posts.filter(post => {
-        const postDate = new Date(post.publishedAt || post.scheduledAt || Date.now())
+        if (post.status === 'published') return false
+        const postDate = new Date(post.scheduledAt || post.publishedAt || Date.now())
         return isSameDay(postDate, cloneDay)
       })
 
@@ -352,6 +354,39 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Published Posts Section */}
+      {posts.filter(p => p.status === 'published').length > 0 && (
+        <div className="border-t border-gray-100">
+          <button
+            onClick={() => setShowPublished(v => !v)}
+            className="w-full px-6 py-4 flex items-center justify-between text-sm text-gray-500 hover:bg-gray-50/50 transition-colors"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <Rss className="w-4 h-4 text-green-500" />
+              投稿済みを見る
+              <span className="text-xs text-gray-400 font-normal">{posts.filter(p => p.status === 'published').length}件</span>
+            </span>
+            <ChevronRight className={`w-4 h-4 transition-transform ${showPublished ? 'rotate-90' : ''}`} />
+          </button>
+          {showPublished && (
+            <div className="px-6 pb-6 bg-gray-50/30">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {posts.filter(p => p.status === 'published').sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()).map(post => (
+                  <div key={post.id} className="p-4 bg-white border border-gray-200 rounded-2xl flex flex-col gap-2">
+                    <div className="text-xs text-gray-600 leading-relaxed line-clamp-4">
+                      {post.content}
+                    </div>
+                    <div className="text-[10px] text-gray-400">
+                      {post.publishedAt ? format(new Date(post.publishedAt), 'M/d HH:mm') : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
