@@ -15,6 +15,8 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
   const [isSaving, setIsSaving] = useState(false)
   const [postCountPerDay, setPostCountPerDay] = useState(profile?.postCountPerDay || 3)
   const [postIntervalType, setPostIntervalType] = useState(profile?.postIntervalType || 'uniform')
+  const [postStartHour, setPostStartHour] = useState(profile?.postStartHour ?? 9)
+  const [postEndHour, setPostEndHour] = useState(profile?.postEndHour ?? 21)
   const [isRescheduling, setIsRescheduling] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
@@ -30,7 +32,9 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
         body: JSON.stringify({
           profileId: profile.id,
           postCountPerDay,
-          postIntervalType
+          postIntervalType,
+          postStartHour,
+          postEndHour,
         })
       })
       if (res.ok) {
@@ -172,9 +176,25 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-2">1日の中での投稿間隔</label>
               <select className="w-full md:w-64 p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postIntervalType} onChange={e => setPostIntervalType(e.target.value)}>
-                <option value="uniform">等間隔（9時〜21時で均等）</option>
+                <option value="uniform">等間隔（均等に配分）</option>
                 <option value="random">まちまち（ランダムな時間）</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-2">投稿時間帯（JST）</label>
+              <div className="flex items-center gap-2">
+                <select className="p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postStartHour} onChange={e => setPostStartHour(Number(e.target.value))}>
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+                <span className="text-xs text-gray-400">〜</span>
+                <select className="p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postEndHour} onChange={e => setPostEndHour(Number(e.target.value))}>
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <button 

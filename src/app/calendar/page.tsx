@@ -3,6 +3,7 @@ import { Calendar, Clock, CheckCircle2, AtSign, Rss } from 'lucide-react'
 import { format, isFuture, isPast } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { CalendarView } from '@/components/CalendarView'
+import { BulkDeleteScheduledButton } from '@/components/BulkDeleteScheduledButton'
 
 import { cookies } from 'next/headers'
 
@@ -37,10 +38,13 @@ export default async function CalendarPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12">
         <section className="space-y-8">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-primary-400" />
-            これからの投稿 (予約済)
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary-400" />
+              これからの投稿 (予約済)
+            </h2>
+            <BulkDeleteScheduledButton count={scheduled.length} />
+          </div>
           <div className="space-y-4">
             {scheduled.length === 0 ? (
               <div className="p-8 text-center border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">

@@ -77,8 +77,8 @@ export function AIAssistant({ profileId }: { profileId?: string }) {
   }
 
   return (
-    <div className="bg-linear-to-br from-indigo-50/50 to-primary-50/30 rounded-2xl border border-indigo-100/50 p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.01)] transition-all hover:border-indigo-200/60">
-      <div className="flex items-start justify-between gap-6 mb-6">
+    <div className="bg-linear-to-br from-indigo-50/50 to-primary-50/30 rounded-2xl border border-indigo-100/50 p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.01)] transition-all hover:border-indigo-200/60">
+      <div className="flex flex-col gap-4 mb-6">
         <div>
           <h2 className="text-sm font-medium tracking-wide flex items-center gap-2 mb-1">
             <BrainCircuit className="w-5 h-5 text-indigo-500" />
@@ -88,7 +88,7 @@ export function AIAssistant({ profileId }: { profileId?: string }) {
             分析による改善提案や、テーマもお任せの「完全自動」未来スケジュール作成を一元管理します。
           </p>
         </div>
-        <div className="flex flex-col gap-2 min-w-max">
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleAutoGenerate}
             disabled={generating || loading}
@@ -97,7 +97,7 @@ export function AIAssistant({ profileId }: { profileId?: string }) {
             <Sparkles className={`w-3.5 h-3.5 ${generating ? 'animate-pulse' : ''}`} />
             {generating ? '全自動考案中...' : 'AIに完全お任せで作る (スワイプ)'}
           </button>
-          
+
           <button
             onClick={handleAnalyze}
             disabled={loading || generating}

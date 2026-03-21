@@ -36,7 +36,7 @@ export async function GET() {
 
     const userPrompt = `記事タイトル: ${latestItem.title}\n概要: ${latestItem.contentSnippet || latestItem.content}\nURL: ${latestItem.link}`
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${settings.geminiApiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

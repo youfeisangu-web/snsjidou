@@ -33,7 +33,7 @@ export default async function AnalyticsPage() {
             <thead>
               <tr className="border-b border-primary-50 bg-gray-50/50">
                 <th className="px-8 py-5 text-[10px] uppercase tracking-widest text-gray-400 font-medium whitespace-nowrap">投稿内容</th>
-                <th className="px-8 py-5 text-[10px] uppercase tracking-widest text-gray-400 font-medium">プラットフォーム</th>
+                <th className="px-8 py-5 text-[10px] uppercase tracking-widest text-gray-400 font-medium whitespace-nowrap">プラットフォーム</th>
                 <th className="px-4 py-5 text-[10px] uppercase tracking-widest text-gray-400 font-medium text-right"><div className="flex justify-end gap-1.5 items-center"><Eye className="w-3.5 h-3.5" /> 表示回数</div></th>
                 <th className="px-4 py-5 text-[10px] uppercase tracking-widest text-gray-400 font-medium text-right"><div className="flex justify-end gap-1.5 items-center"><Heart className="w-3.5 h-3.5" /> いいね</div></th>
                 <th className="px-4 py-5 text-[10px] uppercase tracking-widest text-gray-400 font-medium text-right"><div className="flex justify-end gap-1.5 items-center"><MessageCircle className="w-3.5 h-3.5" /> コメント</div></th>
