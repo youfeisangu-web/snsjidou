@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday } from 'date-fns'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Clock, AtSign, Rss, Archive, RefreshCw, X } from 'lucide-react'
 
@@ -193,6 +193,22 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
     days = []
   }
 
+  // 今後7日分の予定投稿をグループ化して表示するデータ
+  const upcomingScheduled = posts
+    .filter(p => p.status === 'scheduled' && p.scheduledAt)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+
+  const upcomingByDay: { label: string, date: Date, posts: Post[] }[] = []
+  const today = startOfDay(new Date())
+  for (let d = 0; d < 7; d++) {
+    const day = addDays(today, d)
+    const dayPosts = upcomingScheduled.filter(p => isSameDay(new Date(p.scheduledAt), day))
+    if (dayPosts.length > 0) {
+      const label = d === 0 ? '今日' : d === 1 ? '明日' : format(day, 'M/d（E）', { locale: ja })
+      upcomingByDay.push({ label, date: day, posts: dayPosts })
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Settings Card for Reschedule */}
@@ -244,6 +260,43 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               <Archive className={`w-4 h-4 ${isRestoring ? 'animate-pulse' : ''}`} />
               {isRestoring ? '在庫に戻し中...' : '未投稿を在庫に戻す'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Schedule Timeline */}
+      {upcomingByDay.length > 0 && (
+        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-indigo-500" />
+            今後の投稿スケジュール
+            <span className="text-xs font-normal text-gray-400 ml-1">（{upcomingScheduled.length}件予約中）</span>
+          </h3>
+          <div className="space-y-4">
+            {upcomingByDay.map(({ label, date, posts: dayPosts }) => (
+              <div key={date.toISOString()}>
+                <div className="text-xs font-semibold text-indigo-600 mb-2 flex items-center gap-2">
+                  <span className="bg-indigo-50 px-2 py-0.5 rounded-full">{label}</span>
+                  <span className="text-gray-400 font-normal">{dayPosts.length}件</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dayPosts.map(post => (
+                    <div
+                      key={post.id}
+                      onClick={() => handlePostClick(post)}
+                      className="flex items-center gap-2 px-3 py-2 bg-indigo-50/60 border border-indigo-100 rounded-xl cursor-pointer hover:bg-indigo-100 transition-all group max-w-xs"
+                    >
+                      <span className="text-xs font-bold text-indigo-600 whitespace-nowrap">
+                        {format(new Date(post.scheduledAt), 'HH:mm')}
+                      </span>
+                      <span className="text-xs text-gray-600 truncate group-hover:text-gray-900 transition-colors">
+                        {post.content.replace(/\|\|\|THREAD\|\|\|/g, ' ').slice(0, 30)}{post.content.length > 30 ? '…' : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

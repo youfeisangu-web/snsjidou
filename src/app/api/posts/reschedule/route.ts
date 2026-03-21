@@ -25,48 +25,99 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: 'No scheduled posts to reschedule.' })
     }
 
-    let scheduleDate = new Date()
-    scheduleDate.setDate(scheduleDate.getDate() + 1)
-    scheduleDate.setHours(9, 0, 0, 0)
-    
     const countPerDay = profile.postCountPerDay || 3
     const intervalType = profile.postIntervalType || 'uniform'
     const startHour = profile.postStartHour ?? 9
     const endHour = (profile.postEndHour ?? 21) > startHour ? (profile.postEndHour ?? 21) : startHour + 12
 
+    // 今日のJST時刻を取得し、投稿枠を計算する
+    const nowUtc = new Date()
+    const nowJstHour = (nowUtc.getUTCHours() + 9) % 24
+    const nowJstMinute = nowUtc.getUTCMinutes()
+    const nowJstDecimal = nowJstHour + nowJstMinute / 60
+
+    // 今日使える投稿枠インデックスを計算（現在時刻より15分以上先のスロットのみ）
+    const getTodaySlots = () => {
+      const slots: number[] = [] // postIndexInDay values
+      for (let p = 0; p < countPerDay; p++) {
+        let slotHour: number
+        if (intervalType === 'uniform') {
+          const totalAvailableHours = endHour - startHour
+          const hourOffset = countPerDay > 1
+            ? startHour + (p * (totalAvailableHours / (countPerDay - 1)))
+            : (startHour + endHour) / 2
+          slotHour = hourOffset
+        } else {
+          // randomの場合は時間が固定されていないので今日は全スロット使わず翌日から
+          return []
+        }
+        if (slotHour >= nowJstDecimal + 0.25) slots.push(p)
+      }
+      return slots
+    }
+    const todaySlots = getTodaySlots()
+
+    // ベース日付：今日（UTC）
+    const todayUtcBase = new Date(nowUtc)
+    todayUtcBase.setUTCHours(0, 0, 0, 0)
+
+    // 各投稿にスロットを割り当て
+    // todaySlotsが使える分は今日に、残りは明日以降にDayIndexを進める
+    const updates: { id: string, scheduledFor: Date }[] = []
+    let todayUsed = 0
+    let tomorrowPostIndex = 0 // 明日以降のpost index (0-based per day)
+
     for (let i = 0; i < scheduledPosts.length; i++) {
-        const postData = scheduledPosts[i]
-        const dayIndex = Math.floor(i / countPerDay)
-        const postIndexInDay = i % countPerDay
+      const postData = scheduledPosts[i]
+      let finalHour: number
+      let finalMinute: number
+      let scheduledFor: Date
 
-        const scheduledFor = new Date(scheduleDate)
-        scheduledFor.setDate(scheduledFor.getDate() + dayIndex)
+      if (todayUsed < todaySlots.length) {
+        // 今日のスロット
+        const postIndexInDay = todaySlots[todayUsed]
+        todayUsed++
 
-        let finalHour = Math.floor((startHour + endHour) / 2);
-        let finalMinute = 0;
+        const totalAvailableHours = endHour - startHour
+        const hourOffset = countPerDay > 1
+          ? startHour + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
+          : (startHour + endHour) / 2
+        finalHour = Math.floor(hourOffset)
+        finalMinute = Math.floor((hourOffset % 1) * 60)
+
+        scheduledFor = new Date(todayUtcBase)
+        scheduledFor.setUTCHours(finalHour - 9, finalMinute, 0, 0)
+      } else {
+        // 明日以降
+        const dayIndex = Math.floor(tomorrowPostIndex / countPerDay) + 1
+        const postIndexInDay = tomorrowPostIndex % countPerDay
+        tomorrowPostIndex++
 
         if (intervalType === 'uniform') {
           const totalAvailableHours = endHour - startHour
-          let hourOffset = startHour
-          if (countPerDay > 1) {
-              hourOffset = startHour + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
-          } else {
-              hourOffset = (startHour + endHour) / 2
-          }
-          finalHour = Math.floor(hourOffset);
-          finalMinute = Math.floor((hourOffset % 1) * 60);
+          const hourOffset = countPerDay > 1
+            ? startHour + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
+            : (startHour + endHour) / 2
+          finalHour = Math.floor(hourOffset)
+          finalMinute = Math.floor((hourOffset % 1) * 60)
         } else {
           finalHour = startHour + Math.floor(Math.random() * (endHour - startHour))
           finalMinute = Math.floor(Math.random() * 60)
         }
-        
-        // JST to UTC conversion
-        scheduledFor.setUTCHours(finalHour - 9, finalMinute, 0, 0)
 
-        await prisma.post.update({
-          where: { id: postData.id },
-          data: { scheduledAt: scheduledFor, status: 'scheduled' }
-        })
+        scheduledFor = new Date(todayUtcBase)
+        scheduledFor.setDate(scheduledFor.getDate() + dayIndex)
+        scheduledFor.setUTCHours(finalHour - 9, finalMinute, 0, 0)
+      }
+
+      updates.push({ id: postData.id, scheduledFor })
+    }
+
+    for (const { id, scheduledFor } of updates) {
+      await prisma.post.update({
+        where: { id },
+        data: { scheduledAt: scheduledFor, status: 'scheduled' }
+      })
     }
 
     return NextResponse.json({ success: true, rescheduledCount: scheduledPosts.length })
