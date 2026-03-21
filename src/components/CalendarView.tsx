@@ -322,10 +322,23 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               </button>
             </div>
             <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-              {posts.filter(p => p.status === 'scheduled' && isSameDay(new Date(p.scheduledAt), selectedDay)).sort((a,b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()).map(post => (
-                <div key={post.id} onClick={() => handlePostClick(post)} className="flex items-start gap-4 p-4 rounded-2xl border border-indigo-100 bg-indigo-50/30 cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-all">
+              {posts.filter(p => {
+                const postDate = new Date(p.publishedAt || p.scheduledAt || Date.now())
+                return isSameDay(postDate, selectedDay)
+              }).sort((a, b) => {
+                const aDate = new Date(a.publishedAt || a.scheduledAt || Date.now())
+                const bDate = new Date(b.publishedAt || b.scheduledAt || Date.now())
+                return aDate.getTime() - bDate.getTime()
+              }).map(post => (
+                <div key={post.id} onClick={() => handlePostClick(post)} className={`flex items-start gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
+                  post.status === 'scheduled'
+                    ? 'border-indigo-100 bg-indigo-50/30 hover:bg-indigo-50 hover:border-indigo-200'
+                    : 'border-gray-100 bg-gray-50/30 hover:bg-gray-50 hover:border-gray-200'
+                }`}>
                   <div className="flex-shrink-0 w-16 text-center">
-                    <span className="text-sm font-bold text-indigo-600">{format(new Date(post.scheduledAt), 'HH:mm')}</span>
+                    <span className={`text-sm font-bold ${post.status === 'scheduled' ? 'text-indigo-600' : 'text-gray-500'}`}>
+                      {format(new Date(post.publishedAt || post.scheduledAt), 'HH:mm')}
+                    </span>
                     <span className="block text-[10px] text-gray-500 mt-1 uppercase tracking-widest">{post.status}</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -333,8 +346,11 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
                   </div>
                 </div>
               ))}
-              {posts.filter(p => p.status === 'scheduled' && isSameDay(new Date(p.scheduledAt), selectedDay)).length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-8">この日の予約投稿はありません。</p>
+              {posts.filter(p => {
+                const postDate = new Date(p.publishedAt || p.scheduledAt || Date.now())
+                return isSameDay(postDate, selectedDay)
+              }).length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-8">この日の投稿はありません。</p>
               )}
             </div>
           </div>
