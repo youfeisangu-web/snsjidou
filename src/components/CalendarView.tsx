@@ -146,8 +146,8 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
       const cloneDay = day
       
       const dayPosts = posts.filter(post => {
-        if (post.status === 'published') return false
-        const postDate = new Date(post.scheduledAt || post.publishedAt || Date.now())
+        if (post.status !== 'scheduled' || !post.scheduledAt) return false
+        const postDate = new Date(post.scheduledAt)
         return isSameDay(postDate, cloneDay)
       })
 
@@ -180,7 +180,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
                   {post.status === 'scheduled' ? <Clock className="w-3 h-3 text-indigo-500" /> : null}
                   <AtSign className="w-3 h-3 text-black" />
                   <span className="font-medium ml-auto">
-                    {format(new Date(post.scheduledAt || post.publishedAt), 'HH:mm')}
+                    {format(new Date(post.scheduledAt), 'HH:mm')}
                   </span>
                 </div>
                 <div className="truncate font-medium">{post.content}</div>
@@ -461,12 +461,10 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
             </div>
             <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
               {posts.filter(p => {
-                const postDate = new Date(p.publishedAt || p.scheduledAt || Date.now())
-                return isSameDay(postDate, selectedDay)
+                if (p.status !== 'scheduled' || !p.scheduledAt) return false;
+                return isSameDay(new Date(p.scheduledAt), selectedDay)
               }).sort((a, b) => {
-                const aDate = new Date(a.publishedAt || a.scheduledAt || Date.now())
-                const bDate = new Date(b.publishedAt || b.scheduledAt || Date.now())
-                return aDate.getTime() - bDate.getTime()
+                return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
               }).map(post => (
                 <div key={post.id} onClick={() => handlePostClick(post)} className={`flex items-start gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
                   post.status === 'scheduled'
@@ -475,7 +473,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
                 }`}>
                   <div className="flex-shrink-0 w-16 text-center">
                     <span className={`text-sm font-bold ${post.status === 'scheduled' ? 'text-indigo-600' : 'text-gray-500'}`}>
-                      {format(new Date(post.publishedAt || post.scheduledAt), 'HH:mm')}
+                      {format(new Date(post.scheduledAt), 'HH:mm')}
                     </span>
                     <span className="block text-[10px] text-gray-500 mt-1 uppercase tracking-widest">{post.status}</span>
                   </div>
@@ -485,8 +483,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
                 </div>
               ))}
               {posts.filter(p => {
-                const postDate = new Date(p.publishedAt || p.scheduledAt || Date.now())
-                return isSameDay(postDate, selectedDay)
+                return p.status === 'scheduled' && p.scheduledAt && isSameDay(new Date(p.scheduledAt), selectedDay)
               }).length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-8">この日の投稿はありません。</p>
               )}
