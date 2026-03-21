@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     const countPerDay = profile.postCountPerDay || 3
     const intervalType = profile.postIntervalType || 'uniform'
     const startHour = profile.postStartHour ?? 9
-    const endHour = profile.postEndHour ?? 21
+    const endHour = (profile.postEndHour ?? 21) > startHour ? (profile.postEndHour ?? 21) : startHour + 12
 
     for (let i = 0; i < scheduledPosts.length; i++) {
         const postData = scheduledPosts[i]
