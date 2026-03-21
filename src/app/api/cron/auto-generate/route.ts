@@ -77,10 +77,28 @@ ${profile.relatedTopics || '（特になし）'}
 
         // 2. Generate with AI if needed
         if (generateCount > 0 && true /* We already checked autoCreateDeficientPosts, wait, actually if we hit this, we need Gemini */) {
+
+          // テンプレートを取得（最後に使った順で循環）
+          const activeTemplates = await (prisma as any).postTemplate.findMany({
+            where: { profileId: profile.id, isActive: true },
+            orderBy: [{ lastUsedAt: 'asc' }, { createdAt: 'asc' }]
+          })
+
+          const templateSection = activeTemplates.length > 0
+            ? `【投稿パターン（型）の指定】
+以下の${activeTemplates.length}種類のパターンを順番に使い回して、それぞれの型の文体・構成・トーンを忠実に再現してください。
+生成する${generateCount}件の投稿を、これらのパターンで均等にカバーするよう分散させてください。
+
+${activeTemplates.map((t: any, i: number) => `--- パターン${i + 1}：${t.name} ---\n（参考例文）\n${t.examplePost}${t.memo ? `\n（ポイント）${t.memo}` : ''}`).join('\n\n')}
+
+上記パターンの【文体・構成・長さ・トーン・スレッド分け方】を参考にしつつ、サービス内容や人格に合わせた独自コンテンツを作成してください。
+`
+            : ''
+
           const sysPrompt = `${customPersona}
 上記の【あなたの人格】として振る舞い、以下のサービス情報を踏まえて投稿を生成してください。
 ${serviceInfo}
-
+${templateSection}
 向こう${targetDays}日分（1日あたり${countPerDay}投稿ペース想定）の独立した投稿内容を考案してください。
 
 【スレッド形式（ツリー投稿）の推奨】
@@ -96,6 +114,7 @@ ${serviceInfo}
   { "content": "（投稿文2）", "suggestedTime": "any" }
 ]
 ※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。余計なマークダウンや説明は不要です。配列から始めてください。
+※ 投稿文には絶対に「**太字**」のようなMarkdown記法（アスタリスクを使った強調）を使わないでください。SNSに投稿するプレーンテキストとして書いてください。
 ${contextContext}`
 
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
@@ -154,6 +173,17 @@ ${contextContext}`
           if (Array.isArray(postsArray)) {
             postsArray.forEach(p => combinedPosts.push({ content: p.content, suggestedTime: p.suggestedTime || 'any' }))
           }
+
+          // テンプレートの使用記録を更新
+          if (activeTemplates.length > 0) {
+            const now = new Date()
+            for (const t of activeTemplates) {
+              await (prisma as any).postTemplate.update({
+                where: { id: t.id },
+                data: { usageCount: t.usageCount + 1, lastUsedAt: now }
+              })
+            }
+          }
         }
 
         if (combinedPosts.length === 0) {
@@ -174,6 +204,8 @@ ${contextContext}`
         scheduleDate.setHours(9, 0, 0, 0)
         
         const intervalType = profile.postIntervalType || 'uniform'
+        const startHour = (profile as any).postStartHour ?? 9
+        const endHour = (profile as any).postEndHour ?? 21
 
         let availableImages: any[] = []
         if (profile.useImageWarehouse) {
@@ -209,17 +241,17 @@ ${contextContext}`
               finalMinute = Math.floor(Math.random() * 60);
             } else {
               if (intervalType === 'uniform') {
-                const totalAvailableHours = 12 // 9am to 9pm
-                let hourOffset = 9
+                const totalAvailableHours = endHour - startHour
+                let hourOffset = startHour
                 if (countPerDay > 1) {
-                    hourOffset = 9 + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
+                    hourOffset = startHour + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
                 } else {
-                    hourOffset = 12
+                    hourOffset = (startHour + endHour) / 2
                 }
                 finalHour = Math.floor(hourOffset);
                 finalMinute = Math.floor((hourOffset % 1) * 60);
               } else {
-                finalHour = 12 + Math.floor(Math.random() * 6); // default fallback to noon-evening
+                finalHour = startHour + Math.floor(Math.random() * (endHour - startHour))
                 finalMinute = Math.floor(Math.random() * 60)
               }
             }

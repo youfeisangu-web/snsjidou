@@ -3,14 +3,16 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(req: Request) {
   try {
-    const { profileId, postCountPerDay, postIntervalType } = await req.json()
+    const { profileId, postCountPerDay, postIntervalType, postStartHour, postEndHour } = await req.json()
     if (!profileId) return NextResponse.json({ error: 'Profile ID required' }, { status: 400 })
 
     const profile = await prisma.profile.update({
       where: { id: profileId },
       data: {
         postCountPerDay: parseInt(postCountPerDay || '3', 10),
-        postIntervalType: postIntervalType || 'uniform'
+        postIntervalType: postIntervalType || 'uniform',
+        postStartHour: parseInt(postStartHour ?? '9', 10),
+        postEndHour: parseInt(postEndHour ?? '21', 10),
       }
     })
 
@@ -29,30 +31,32 @@ export async function POST(req: Request) {
     
     const countPerDay = profile.postCountPerDay || 3
     const intervalType = profile.postIntervalType || 'uniform'
+    const startHour = profile.postStartHour ?? 9
+    const endHour = profile.postEndHour ?? 21
 
     for (let i = 0; i < scheduledPosts.length; i++) {
         const postData = scheduledPosts[i]
         const dayIndex = Math.floor(i / countPerDay)
         const postIndexInDay = i % countPerDay
-        
+
         const scheduledFor = new Date(scheduleDate)
         scheduledFor.setDate(scheduledFor.getDate() + dayIndex)
 
-        let finalHour = 12;
+        let finalHour = Math.floor((startHour + endHour) / 2);
         let finalMinute = 0;
-        
+
         if (intervalType === 'uniform') {
-          const totalAvailableHours = 12 // 9am to 9pm
-          let hourOffset = 9
+          const totalAvailableHours = endHour - startHour
+          let hourOffset = startHour
           if (countPerDay > 1) {
-              hourOffset = 9 + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
+              hourOffset = startHour + (postIndexInDay * (totalAvailableHours / (countPerDay - 1)))
           } else {
-              hourOffset = 12
+              hourOffset = (startHour + endHour) / 2
           }
           finalHour = Math.floor(hourOffset);
           finalMinute = Math.floor((hourOffset % 1) * 60);
         } else {
-          finalHour = 12 + Math.floor(Math.random() * 6); // default fallback
+          finalHour = startHour + Math.floor(Math.random() * (endHour - startHour))
           finalMinute = Math.floor(Math.random() * 60)
         }
         
