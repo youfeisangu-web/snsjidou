@@ -49,7 +49,7 @@ ${rejectedPosts.map(p => `- ${p.content}`).join('\n')}
 簡潔に100〜200字程度にアップデートしてください。
 出力は「更新された設定の文章のみ（マークダウン無し）」でお願いします。`
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${settings.geminiApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

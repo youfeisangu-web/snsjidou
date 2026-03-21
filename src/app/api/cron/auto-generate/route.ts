@@ -117,7 +117,7 @@ ${templateSection}
 ※ 投稿文には絶対に「**太字**」のようなMarkdown記法（アスタリスクを使った強調）を使わないでください。SNSに投稿するプレーンテキストとして書いてください。
 ${contextContext}`
 
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${settings.geminiApiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
     const userPrompt = `【最近の投稿データ】\n${dataSummary}\n\nこのデータを元に、アカウント診断と改善提案と成功要因の抽出をお願いします。`
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${settings.geminiApiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
