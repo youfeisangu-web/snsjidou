@@ -51,6 +51,43 @@ export default function SettingsPage() {
   const [newTemplate, setNewTemplate] = useState({ name: '', examplePost: '', memo: '' })
   const [isAddingTemplate, setIsAddingTemplate] = useState(false)
   const [templateSaving, setTemplateSaving] = useState(false)
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false)
+
+  const handleImageAnalyze = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsAnalyzingImage(true)
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const base64String = (reader.result as string).split(',')[1]
+      try {
+        const res = await fetch('/api/ai/analyze-screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64String, mimeType: file.type })
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setNewTemplate({
+            name: data.name || '',
+            examplePost: data.examplePost || '',
+            memo: data.memo || ''
+          })
+        } else {
+          setDialog({ type: 'alert', message: '画像の解析に失敗しました。' })
+        }
+      } catch (err) {
+        console.error(err)
+        setDialog({ type: 'alert', message: 'エラーが発生しました。' })
+      } finally {
+        setIsAnalyzingImage(false)
+        // reset input value so the same file could be selected again if needed
+        e.target.value = ''
+      }
+    }
+    reader.readAsDataURL(file)
+  }
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(d => {
@@ -509,6 +546,29 @@ export default function SettingsPage() {
 
                 {isAddingTemplate && (
                   <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
+                    <div className="bg-indigo-50/50 border border-indigo-100/50 p-4 rounded-xl flex items-center justify-between">
+                      <div className="flex-1">
+                        <strong className="text-xs text-indigo-900 block mb-1">📷 スクショからAI自動解析（おすすめ！）</strong>
+                        <p className="text-[10px] text-indigo-500">バズった投稿のスクショ画像をアップロードすると、AIがテキストと型（構造）を自動解析して全項目を入力します。</p>
+                      </div>
+                      <div className="shrink-0 relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageAnalyze}
+                          disabled={isAnalyzingImage}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-wait"
+                        />
+                        <button
+                          disabled={isAnalyzingImage}
+                          className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-full hover:bg-indigo-700 transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                        >
+                          {isAnalyzingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '📁 画像を選択'}
+                          {isAnalyzingImage ? '解析中...' : '解析する'}
+                        </button>
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-[11px] font-medium text-gray-600 mb-1">型の名前 <span className="text-red-400">*</span></label>
                       <input
