@@ -248,15 +248,15 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
     <div className="space-y-6">
       {/* Settings Card for Reschedule */}
       {profile && (
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-end justify-between animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="flex flex-col md:flex-row gap-6 w-full md:w-auto">
+        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex flex-col xl:flex-row gap-6 items-start xl:items-end justify-between animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-6 w-full xl:w-auto">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-2">1日の投稿数</label>
-              <input type="number" min="1" max="50" className="w-full md:w-32 p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium" value={postCountPerDay} onChange={e => setPostCountPerDay(Number(e.target.value))} />
+              <input type="number" min="1" max="50" className="w-full sm:w-32 p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium" value={postCountPerDay} onChange={e => setPostCountPerDay(Number(e.target.value))} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-2">1日の中での投稿間隔</label>
-              <select className="w-full md:w-64 p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postIntervalType} onChange={e => setPostIntervalType(e.target.value)}>
+              <select className="w-full sm:w-64 p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postIntervalType} onChange={e => setPostIntervalType(e.target.value)}>
                 <option value="uniform">等間隔（均等に配分）</option>
                 <option value="random">まちまち（ランダムな時間）</option>
               </select>
@@ -264,13 +264,13 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-2">投稿時間帯（JST）</label>
               <div className="flex items-center gap-2">
-                <select className="p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postStartHour} onChange={e => setPostStartHour(Number(e.target.value))}>
+                <select className="p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700 w-full sm:w-auto" value={postStartHour} onChange={e => setPostStartHour(Number(e.target.value))}>
                   {Array.from({ length: 24 }, (_, i) => (
                     <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
                   ))}
                 </select>
                 <span className="text-xs text-gray-400">〜</span>
-                <select className="p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700" value={postEndHour} onChange={e => setPostEndHour(Number(e.target.value))}>
+                <select className="p-2.5 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all font-medium text-gray-700 w-full sm:w-auto" value={postEndHour} onChange={e => setPostEndHour(Number(e.target.value))}>
                   {Array.from({ length: 24 }, (_, i) => (
                     <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
                   ))}
@@ -278,11 +278,11 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
               </div>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 shrink-0">
             <button
               onClick={handleReschedule}
               disabled={isRescheduling || isRestoring}
-              className="w-full md:w-auto px-6 py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 whitespace-nowrap shrink-0"
             >
               {isRescheduling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               {isRescheduling ? '再振り分け中...' : '変更して再振り分け'}
@@ -290,7 +290,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
             <button
               onClick={handleRestoreToDraft}
               disabled={isRestoring || isRescheduling || isProcessing}
-              className="w-full md:w-auto px-6 py-3 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:shadow-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 whitespace-nowrap shrink-0"
             >
               {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
               {isRestoring ? '在庫に戻し中...' : '未投稿を在庫に戻す'}
@@ -298,7 +298,7 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
             <button
               onClick={handleProcessCron}
               disabled={isProcessing || isRescheduling || isRestoring}
-              className="w-full md:w-auto px-6 py-3 bg-green-50 text-green-600 hover:bg-green-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 bg-green-50 text-green-600 hover:bg-green-100 hover:shadow-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 whitespace-nowrap shrink-0"
             >
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
               {isProcessing ? '実行中...' : '配信チェックを開始'}
