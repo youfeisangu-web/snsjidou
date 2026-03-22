@@ -35,7 +35,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         postIntervalType: data.postIntervalType,
         postLength: data.postLength,
         autoCreateDeficientPosts: data.autoCreateDeficientPosts,
-        useImageWarehouse: data.useImageWarehouse
+        useImageWarehouse: data.useImageWarehouse,
+        autoGenerateAsDraft: data.autoGenerateAsDraft
       }
     })
 

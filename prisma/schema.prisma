@@ -48,6 +48,7 @@ model Profile {
   postEndHour         Int      @default(21) // 投稿時間帯の終了時刻（JST）
   useImageWarehouse   Boolean  @default(false)
   autoCreateDeficientPosts Boolean @default(true)
+  autoGenerateAsDraft Boolean  @default(false)
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

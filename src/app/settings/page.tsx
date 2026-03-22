@@ -440,6 +440,19 @@ export default function SettingsPage() {
                       <span className="text-xs text-gray-500 font-light leading-relaxed">溜めておいた画像からランダムで引き取って投稿に添付します（一度使った画像は当分使いません）。</span>
                     </div>
                   </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={profile.autoGenerateAsDraft ?? false}
+                      onChange={e => updateProfileLocal('autoGenerateAsDraft', e.target.checked)}
+                      className="w-4 h-4 accent-indigo-600 mt-0.5 shrink-0"
+                    />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm border-l-4 border-indigo-500 pl-2 text-indigo-700 font-bold bg-indigo-50 py-0.5 pr-2 w-fit rounded-r-md">API減衰対策: 生成投稿を「下書き」で止める（予約しない）</span>
+                      <span className="text-xs text-gray-500 font-light leading-relaxed">AIにたくさん投稿を生成させますが、カレンダーには「下書き（未予約）」としてストックされます。ご自身で公式アプリへコピペ投稿することで、API特有のインプレッション減少ペナルティを100%回避できます。</span>
+                    </div>
+                  </label>
                 </div>
               </div>
 

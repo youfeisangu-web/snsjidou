@@ -118,6 +118,11 @@ ${templateSection}
 
 ${lengthInstruction}
 
+【脱・AI感（人間味ブーストルール）※絶対遵守】
+1. 「いかがでしたか？」「〜ですよね」「〜してみてはどうでしょうか」のようなAI特有の定型句や無難な結びの言葉は一切使用しないでください。
+2. もっと感情的で、断言するような強い語気や、主観的な意見（「これは異常」「正直言って〜」「絶対にやるべき」など）を積極的に混ぜて、人間が書いたような生々しさと「トゲ」を出してください。
+3. すべての投稿の最後（または最後のスレッド）は、必ず「フォロワーに意見を求める短くてラフな問いかけ（例: みんなはどう思う？ リプ欄で教えて 等）」にして、強引にコメント（リプライ）を誘発させてください。
+
 【スレッド形式（ツリー投稿）の推奨】
 長文になる場合や、クイズ形式、結論を焦らしたい場合は、1つの投稿にまとめず、Threadsでよくある「スレッド形式（リプライで続きを書く）」にしてください。
 スレッド形式にする場合は、各投稿（親投稿、子投稿1、子投稿2...）の間を必ず \`|||THREAD|||\` という文字列で区切ってください。
@@ -319,13 +324,16 @@ ${contextContext}`
               }
             }
             
+            let postStatus = profile.autoGenerateAsDraft ? 'draft' : 'scheduled';
+            let finalScheduledFor = profile.autoGenerateAsDraft ? null : scheduledFor;
+
             let post;
             if (postData.draftId) {
               post = await prisma.post.update({
                 where: { id: postData.draftId },
                 data: {
-                  status: 'scheduled',
-                  scheduledAt: scheduledFor,
+                  status: postStatus,
+                  scheduledAt: finalScheduledFor,
                   imageUrl: imageUrl || undefined
                 }
               })
@@ -334,8 +342,8 @@ ${contextContext}`
                 data: {
                   content: postData.content,
                   platform: 'both',
-                  status: 'scheduled',
-                  scheduledAt: scheduledFor,
+                  status: postStatus,
+                  scheduledAt: finalScheduledFor,
                   profileId: profile.id,
                   imageUrl: imageUrl
                 }
