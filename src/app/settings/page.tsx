@@ -453,6 +453,19 @@ export default function SettingsPage() {
                       <span className="text-xs text-gray-500 font-light leading-relaxed">AIにたくさん投稿を生成させますが、カレンダーには「下書き（未予約）」としてストックされます。ご自身で公式アプリへコピペ投稿することで、API特有のインプレッション減少ペナルティを100%回避できます。</span>
                     </div>
                   </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={profile.autoReplyEnabled ?? false}
+                      onChange={e => updateProfileLocal('autoReplyEnabled', e.target.checked)}
+                      className="w-4 h-4 accent-indigo-600 mt-0.5 shrink-0"
+                    />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm border-l-4 border-indigo-500 pl-2 text-indigo-700 font-bold bg-indigo-50 py-0.5 pr-2 w-fit rounded-r-md">💬 自動リプライ（AI返信）エンジン</span>
+                      <span className="text-xs text-gray-500 font-light leading-relaxed">あなたの過去の投稿についたフォロワーからのコメントをAIが自動で検知し、自然な返信を全自動で行います。コメント欄が活発になることで、アルゴリズムからの評価が劇的に上昇します。</span>
+                    </div>
+                  </label>
                 </div>
               </div>
 

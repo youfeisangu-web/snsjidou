@@ -49,6 +49,7 @@ model Profile {
   useImageWarehouse   Boolean  @default(false)
   autoCreateDeficientPosts Boolean @default(true)
   autoGenerateAsDraft Boolean  @default(false)
+  autoReplyEnabled    Boolean  @default(false)
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -57,6 +58,7 @@ model Profile {
   insights            PageInsight[]
   images              ImageAsset[]
   templates           PostTemplate[]
+  autoReplyRecords    AutoReplyRecord[]
 }
 
 model PostTemplate {
@@ -125,6 +127,15 @@ model PageInsight {
   followers         Int      @default(0)
   postImpressions   Int      @default(0) // period
   pageViews         Int      @default(0) // period
-
   recordedAt        DateTime @default(now())
+}
+
+model AutoReplyRecord {
+  id              String   @id @default(cuid())
+  profileId       String
+  targetCommentId String   @unique // The ID of the follower's comment we replied to
+  replyText       String   @db.Text
+  createdAt       DateTime @default(now())
+
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
