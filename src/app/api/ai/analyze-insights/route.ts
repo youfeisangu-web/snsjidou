@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const maxDuration = 300; // Vercel Pro timeout
+
 import { cookies } from 'next/headers'
 
 export async function POST(req: Request) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export const maxDuration = 60; // Vercel Timeout対策
+export const maxDuration = 300; // Vercel Timeout対策 (Proプラン用)
 
 export async function POST(req: Request) {
   try {

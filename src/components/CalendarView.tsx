@@ -378,6 +378,29 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
         {rows}
       </div>
 
+      {/* Failed Posts Section */}
+      {posts.filter(p => p.status === 'failed').length > 0 && (
+        <div className="p-6 bg-red-50/50 border-b border-red-100">
+          <h3 className="text-sm font-bold text-red-600 mb-4 flex items-center gap-2">
+            <X className="w-5 h-5 bg-red-100 rounded-full p-1" />
+            投稿に失敗した記事（再認証・修正等が必要です） {posts.filter(p => p.status === 'failed').length}件
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {posts.filter(p => p.status === 'failed').map(post => (
+              <div key={post.id} onClick={() => handlePostClick(post)} className="p-4 bg-white border border-red-200 rounded-2xl hover:border-red-400 hover:shadow-sm transition-all cursor-pointer group flex flex-col justify-between gap-3 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.8)]" />
+                <div className="text-xs text-slate-700 leading-relaxed line-clamp-4 group-hover:text-red-900 transition-colors pl-2">
+                  {post.content}
+                </div>
+                <div className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 self-start px-2 py-1 rounded-md ml-2 drop-shadow-sm">
+                  ⚠️ 投稿失敗（クリックして確認）
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Inventory (Drafts) Section */}
       {posts.filter(p => p.status === 'draft').length > 0 && (
         <div className="p-6 bg-gray-50/30">

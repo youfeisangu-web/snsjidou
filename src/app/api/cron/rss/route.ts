@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import Parser from 'rss-parser'
 
+export const maxDuration = 300; // Vercel Pro timeout
+
 const parser = new Parser()
 
 export async function GET() {

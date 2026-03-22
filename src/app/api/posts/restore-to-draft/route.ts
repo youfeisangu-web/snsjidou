@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const result = await prisma.post.updateMany({
       where: {
         profileId,
-        status: 'published',
+        status: { in: ['published', 'failed'] },
         threadsId: null,
       },
       data: {

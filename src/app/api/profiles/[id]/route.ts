@@ -6,12 +6,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const data = await req.json()
     const { id } = await params
 
+    const existing = await prisma.profile.findUnique({ where: { id } })
+    if (!existing) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+
+    let threadsTokenExpiresAt = existing.threadsTokenExpiresAt
+    if (data.threadsAccessToken && data.threadsAccessToken !== existing.threadsAccessToken) {
+      // 変更があった場合は現在から60日後を有効期限に設定
+      threadsTokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
+    } else if (data.threadsAccessToken === '') {
+      threadsTokenExpiresAt = null
+    }
+
     const profile = await prisma.profile.update({
       where: { id },
       data: {
         name: data.name,
         threadsUserId: data.threadsUserId,
         threadsAccessToken: data.threadsAccessToken,
+        threadsTokenExpiresAt,
         rssUrl: data.rssUrl,
         hpUrl: data.hpUrl,
         aiPrompt: data.aiPrompt,

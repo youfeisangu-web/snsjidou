@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const maxDuration = 300; // Vercel Pro timeout
+
 export async function POST(req: Request) {
   try {
     const settings = await prisma.setting.findUnique({ where: { id: 1 } })

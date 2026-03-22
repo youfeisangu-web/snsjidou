@@ -31,6 +31,7 @@ model Profile {
   name                String   @default("My Account")
   threadsUserId       String?
   threadsAccessToken  String?
+  threadsTokenExpiresAt DateTime? // 60-day expiration tracking
   rssUrl              String?  
   hpUrl               String?  
   aiPrompt            String?  

@@ -40,6 +40,13 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<any>(null)
   const [profileStatus, setProfileStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
+  const getRemainingDays = (dateStr: string | null) => {
+    if (!dateStr) return null
+    const diff = new Date(dateStr).getTime() - Date.now()
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+    return Math.max(0, days)
+  }
+
   const [templates, setTemplates] = useState<any[]>([])
   const [newTemplate, setNewTemplate] = useState({ name: '', examplePost: '', memo: '' })
   const [isAddingTemplate, setIsAddingTemplate] = useState(false)
@@ -294,12 +301,19 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase text-slate-500 mb-1">Access Token</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] uppercase text-slate-500">Access Token</label>
+                      {profile.threadsTokenExpiresAt && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getRemainingDays(profile.threadsTokenExpiresAt) === 0 ? 'bg-red-100 text-red-600' : getRemainingDays(profile.threadsTokenExpiresAt)! <= 7 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                          有効期限: 残り {getRemainingDays(profile.threadsTokenExpiresAt)} 日
+                        </span>
+                      )}
+                    </div>
                     <SecretInput
                       value={profile.threadsAccessToken || ''}
                       onChange={v => updateProfileLocal('threadsAccessToken', v)}
-                      placeholder="Threads Access Token"
                       className={inputBase}
+                      placeholder="例: IGQWRPWkhqWkVubl..."
                     />
                   </div>
                 </div>
