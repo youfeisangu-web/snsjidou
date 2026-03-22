@@ -96,18 +96,18 @@ export async function GET() {
                 } else if (statusData.status === 'ERROR') {
                   console.error('Container error:', statusData);
                   currentErrorLog = statusData.error_message || JSON.stringify(statusData);
-                  newStatus = 'failed';
+                  postingFailed = true;
                   break;
                 }
                 await new Promise(resolve => setTimeout(resolve, 2000));
               }
 
-              if (!isFinished && newStatus !== 'failed') {
+              if (!isFinished && !postingFailed) {
                 currentErrorLog = 'Container processing timed out';
-                newStatus = 'failed';
+                postingFailed = true;
                 break;
               }
-              if (newStatus === 'failed') break;
+              if (postingFailed) break;
 
               const publishRes = await fetch(`https://graph.threads.net/v1.0/${profile.threadsUserId}/threads_publish`, {
                 method: 'POST',
