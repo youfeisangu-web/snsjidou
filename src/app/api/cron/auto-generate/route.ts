@@ -46,6 +46,11 @@ ${profile.upcomingFeatures || '（特になし）'}
 
 【ターゲットとする関連項目・リサーチテーマ（これらに関連するトピックスに言及・意見を述べてインプレッションを獲得してください）】
 ${profile.relatedTopics || '（特になし）'}
+
+${profile.aiLearnedInsights ? `
+【超重要：過去の投稿分析データに基づく自己学習ルール（必ず守ること）】
+${profile.aiLearnedInsights}
+` : ''}
 `
 
         const countPerDay = profile.postCountPerDay || 3;

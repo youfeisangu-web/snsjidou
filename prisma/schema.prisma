@@ -18,10 +18,10 @@ model Setting {
   geminiApiKey        String?
   imgbbApiKey         String?
   rssUrl              String?  // RSS自動投稿用URL
-  hpUrl               String?  // HP URL (Threadsのコメントに貼る用)
-  aiPrompt            String?  // AIのサービス情報・指示プロンプト
+  hpUrl               String?  // 対象サイトURL
+  aiPrompt            String?  // システムプロンプトや前提条件
   implementedFeatures String?  // 実装済みの機能
-  upcomingFeatures    String?  // 今後の実装予定機能
+  upcomingFeatures    String?  // 開発中・予定の機能
   relatedTopics       String?  // 関連項目・リサーチテーマ
   updatedAt           DateTime @updatedAt
 }
@@ -35,6 +35,7 @@ model Profile {
   rssUrl              String?  
   hpUrl               String?  
   aiPrompt            String?  
+  aiLearnedInsights   String?
   aiPreferenceRules   String?  @default("")
   successFactors      String?  @default("")
   implementedFeatures String?  
