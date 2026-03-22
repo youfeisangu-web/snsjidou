@@ -181,15 +181,20 @@ export async function POST(req: Request) {
       }
     }
 
+    if (!profile) {
+      return NextResponse.json({ error: '対象のプロファイルが見つかりません' }, { status: 400 })
+    }
+
     const post = await prisma.post.create({
       data: {
         content,
         platform,
         imageUrl: publicImageUrl || imagePath,
         status,
+        errorLog: threadsApiError,
         scheduledAt: scheduledAtStr ? new Date(scheduledAtStr) : null,
         threadsId,
-        profileId: profile?.id
+        profileId: profile.id
       }
     })
 

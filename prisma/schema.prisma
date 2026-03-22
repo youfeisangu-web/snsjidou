@@ -91,9 +91,10 @@ model Post {
   isRss       Boolean  @default(false) // RSSから自動生成されたか
   threadsId   String?  // Threads Post ID
   publishedAt DateTime?
+  errorLog    String?  // エラー原因を保存する用
 
-  profileId   String?
-  profile     Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profileId   String
+  profile     Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   insights     PostInsight[]
 }

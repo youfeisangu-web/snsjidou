@@ -392,8 +392,15 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
                 <div className="text-xs text-slate-700 leading-relaxed line-clamp-4 group-hover:text-red-900 transition-colors pl-2">
                   {post.content}
                 </div>
-                <div className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 self-start px-2 py-1 rounded-md ml-2 drop-shadow-sm">
-                  ⚠️ 投稿失敗（クリックして確認）
+                <div className="flex flex-col gap-1 mt-2">
+                  <div className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 self-start px-2 py-1 rounded-md ml-2 drop-shadow-sm">
+                    ⚠️ 投稿失敗（クリックして確認・編集）
+                  </div>
+                  {post.errorLog && (
+                    <div className="text-[9px] text-red-400 bg-red-50/50 p-1.5 rounded-md ml-2 max-h-16 overflow-hidden text-ellipsis break-all bg-white border border-red-100/50 font-mono">
+                      {post.errorLog}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

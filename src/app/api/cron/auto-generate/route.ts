@@ -124,10 +124,12 @@ ${lengthInstruction}
 
 内部形式:
 [
-  { "content": "（投稿文1。スレッドの場合は: 1投稿目 |||THREAD||| 2投稿目 ）", "suggestedTime": "morning" },
-  { "content": "（投稿文2）", "suggestedTime": "any" }
+  { "content": "（投稿文1。スレッドの場合は: 1投稿目 |||THREAD||| 2投稿目 ）", "suggestedTime": "morning", "needsImage": true },
+  { "content": "（投稿文2）", "suggestedTime": "any", "needsImage": false }
 ]
-※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。余計なマークダウンや説明は不要です。配列から始めてください。
+※ suggestedTime には内容に応じて、そのコンテンツが朝(morning)、昼(noon)、夜(night)のいつ読まれるのが最適か、あるいはいつでも良いか(any)を含めてください。
+※ needsImage にはその投稿が「視覚的な訴求（画像）があった方が効果的か」を true または false で判定してください。
+※ 余計なマークダウンや説明は不要です。配列から始めてください。
 ※ 投稿文には絶対に「**太字**」のようなMarkdown記法（アスタリスクを使った強調）を使わないでください。SNSに投稿するプレーンテキストとして書いてください。
 ${contextContext}`
 
@@ -149,9 +151,10 @@ ${contextContext}`
                     type: "OBJECT",
                     properties: {
                       content: { type: "STRING" },
-                      suggestedTime: { type: "STRING" }
+                      suggestedTime: { type: "STRING" },
+                      needsImage: { type: "BOOLEAN" }
                     },
-                    required: ["content", "suggestedTime"]
+                    required: ["content", "suggestedTime", "needsImage"]
                   }
                 }
               }
@@ -185,7 +188,11 @@ ${contextContext}`
           }
 
           if (Array.isArray(postsArray)) {
-            postsArray.forEach(p => combinedPosts.push({ content: p.content, suggestedTime: p.suggestedTime || 'any' }))
+            postsArray.forEach(p => combinedPosts.push({ 
+              content: p.content, 
+              suggestedTime: p.suggestedTime || 'any',
+              needsImage: !!p.needsImage
+            }))
           }
 
           // テンプレートの使用記録を更新
@@ -276,8 +283,8 @@ ${contextContext}`
 
             let imageUrl = null;
             if (availableImages.length > 0) {
-              // Only attach image roughly 50% of the time to avoid being too repetitive
-              if (Math.random() > 0.5) {
+              // Only attach image if the AI determined it needs one (or fallback logic)
+              if (postData.needsImage) {
                 const selectedImg = availableImages.shift()!
                 imageUrl = selectedImg.url
                 availableImages.push(selectedImg)

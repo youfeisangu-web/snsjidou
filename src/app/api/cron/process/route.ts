@@ -21,10 +21,11 @@ export async function GET() {
       let threadsId = post.threadsId
       let newStatus = 'failed'
       let wasPosted = false
+      let currentErrorLog: string | null = null
 
       const profile = post.profile
       if (!profile) {
-        await prisma.post.update({ where: { id: post.id }, data: { status: 'failed' } })
+        await prisma.post.update({ where: { id: post.id }, data: { status: 'failed', errorLog: 'プロフィールが見つかりません' } })
         continue
       }
 
@@ -94,6 +95,7 @@ export async function GET() {
                   break;
                 } else if (statusData.status === 'ERROR') {
                   console.error('Container error:', statusData);
+                  currentErrorLog = statusData.error_message || JSON.stringify(statusData);
                   newStatus = 'failed';
                   break;
                 }
@@ -101,6 +103,7 @@ export async function GET() {
               }
 
               if (!isFinished && newStatus !== 'failed') {
+                currentErrorLog = 'Container processing timed out';
                 newStatus = 'failed';
                 break;
               }
@@ -115,6 +118,7 @@ export async function GET() {
               
               if (pubData.error) {
                 console.error('Threads Publish Error:', pubData);
+                currentErrorLog = pubData.error.message || JSON.stringify(pubData.error);
                 newStatus = 'failed';
                 break;
               }
@@ -125,14 +129,16 @@ export async function GET() {
               if (i < threadNodes.length - 1) await new Promise(resolve => setTimeout(resolve, 3000));
             } else {
               console.error('Threads API Creation Error', creationData)
+              currentErrorLog = creationData.error?.message || JSON.stringify(creationData);
               postingFailed = true
               break
             }
           }
           threadsId = firstPublishedId
           if (firstPublishedId && !postingFailed) wasPosted = true
-        } catch (err) {
+        } catch (err: any) {
           console.error('Threads posting error for post', post.id, err)
+          currentErrorLog = err.message || String(err)
           newStatus = 'failed'
         }
       }
@@ -145,6 +151,7 @@ export async function GET() {
         data: {
           status: newStatus,
           threadsId,
+          errorLog: newStatus === 'failed' ? currentErrorLog : null,
           publishedAt: newStatus === 'published' ? new Date() : null
         }
       })
