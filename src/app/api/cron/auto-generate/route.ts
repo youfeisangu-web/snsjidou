@@ -223,16 +223,27 @@ ${contextContext}`
         })
         
         let scheduleDate = new Date()
+        const currentJstHour = (scheduleDate.getUTCHours() + 9) % 24;
+        
+        let startHour = (profile as any).postStartHour ?? 9
+        let rawEndHour = (profile as any).postEndHour ?? 21
+        let endHour = rawEndHour > startHour ? rawEndHour : startHour + 12
+
         if (currentScheduled.length > 0 && currentScheduled[0].scheduledAt) {
           scheduleDate = new Date(currentScheduled[0].scheduledAt)
+          // 既存キューがある場合は、その翌日から開始
+          scheduleDate.setUTCDate(scheduleDate.getUTCDate() + 1)
+        } else {
+          // キューが空の場合。今日のJST時刻が既に postEndHour を過ぎていたら明日から開始
+          if (currentJstHour >= endHour) {
+            scheduleDate.setUTCDate(scheduleDate.getUTCDate() + 1)
+          }
         }
-        scheduleDate.setDate(scheduleDate.getDate() + 1)
-        scheduleDate.setHours(9, 0, 0, 0)
+        
+        // ベースとなる日付の時刻部分は念のためクリア
+        scheduleDate.setUTCHours(0, 0, 0, 0)
         
         const intervalType = profile.postIntervalType || 'uniform'
-        const startHour = (profile as any).postStartHour ?? 9
-        const rawEndHour = (profile as any).postEndHour ?? 21
-        const endHour = rawEndHour > startHour ? rawEndHour : startHour + 12
 
         let availableImages: any[] = []
         if (profile.useImageWarehouse) {
@@ -283,8 +294,14 @@ ${contextContext}`
               }
             }
             
-            // finalHour is JST. We subtract 9 to set it correctly in UTC.
+            // finalHour は JST なので UTC（-9時間）でセットする
             scheduledFor.setUTCHours(finalHour - 9, finalMinute, 0, 0)
+
+            // もし初回生成時などで「今日」の過去時刻になってしまった場合、現在時刻の少し後ろにずらして即時発射を防ぐ（もしくは即時発射させる）
+            // +1分程度ずらして順次投稿されるようにする
+            if (scheduledFor.getTime() <= Date.now()) {
+                scheduledFor.setTime(Date.now() + (1000 * 60 * 2) + (postIndexInDay * 1000 * 60 * 3)); // 2分後から3分間隔で
+            }
 
             let imageUrl = null;
             if (availableImages.length > 0) {
