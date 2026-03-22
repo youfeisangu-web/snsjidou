@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isToday, startOfDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Clock, AtSign, Rss, Archive, RefreshCw, X, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, AtSign, Rss, Archive, RefreshCw, X, Loader2, PlayCircle } from 'lucide-react'
 
 type Post = any
 
@@ -19,9 +19,33 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
   const [postEndHour, setPostEndHour] = useState(profile?.postEndHour ?? 21)
   const [isRescheduling, setIsRescheduling] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [showPublished, setShowPublished] = useState(false)
   const [dialog, setDialog] = useState<{type: 'confirm' | 'alert', message: string, onConfirm?: () => void} | null>(null)
+
+  const handleProcessCron = async () => {
+    setDialog({
+      type: 'confirm',
+      message: '現在時刻を過ぎている予約投稿がないか確認し、あれば今すぐ投稿を実行しますか？（Vercelの自動巡回を待たずに即時実行します）',
+      onConfirm: async () => {
+        setIsProcessing(true)
+        try {
+          const res = await fetch('/api/cron/process', { method: 'GET' })
+          const data = await res.json()
+          setDialog({
+            type: 'alert',
+            message: data.message || data.error || '実行完了しました',
+            onConfirm: () => window.location.reload()
+          })
+        } catch (e: any) {
+          setDialog({ type: 'alert', message: 'エラー: ' + e.message })
+        } finally {
+          setIsProcessing(false)
+        }
+      }
+    })
+  }
 
   const handleRestoreToDraft = async () => {
     if (!profile) return;
@@ -265,11 +289,19 @@ export function CalendarView({ posts, profile }: { posts: Post[], profile?: any 
             </button>
             <button
               onClick={handleRestoreToDraft}
-              disabled={isRestoring || isRescheduling}
+              disabled={isRestoring || isRescheduling || isProcessing}
               className="w-full md:w-auto px-6 py-3 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
               {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
               {isRestoring ? '在庫に戻し中...' : '未投稿を在庫に戻す'}
+            </button>
+            <button
+              onClick={handleProcessCron}
+              disabled={isProcessing || isRescheduling || isRestoring}
+              className="w-full md:w-auto px-6 py-3 bg-green-50 text-green-600 hover:bg-green-100 hover:shadow-sm font-medium rounded-full transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+            >
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+              {isProcessing ? '実行中...' : '配信チェックを開始'}
             </button>
           </div>
         </div>
