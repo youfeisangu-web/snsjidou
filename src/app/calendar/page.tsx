@@ -5,6 +5,7 @@ import { ja } from 'date-fns/locale'
 import { CalendarView } from '@/components/CalendarView'
 import { BulkDeleteScheduledButton } from '@/components/BulkDeleteScheduledButton'
 import { BulkDeletePublishedButton } from '@/components/BulkDeletePublishedButton'
+import { ImportFromThreadsButton } from '@/components/ImportFromThreadsButton'
 
 import { cookies } from 'next/headers'
 
@@ -79,7 +80,10 @@ export default async function CalendarPage() {
               <CheckCircle2 className="w-4 h-4 text-green-500" />
               過去の投稿
             </h2>
-            <BulkDeletePublishedButton count={published.length} />
+            <div className="flex items-center gap-2">
+              <ImportFromThreadsButton />
+              <BulkDeletePublishedButton count={published.length} />
+            </div>
           </div>
           <div className="space-y-4">
             {published.length === 0 ? (
