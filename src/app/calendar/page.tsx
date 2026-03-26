@@ -4,6 +4,7 @@ import { format, isFuture, isPast } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { CalendarView } from '@/components/CalendarView'
 import { BulkDeleteScheduledButton } from '@/components/BulkDeleteScheduledButton'
+import { BulkDeletePublishedButton } from '@/components/BulkDeletePublishedButton'
 
 import { cookies } from 'next/headers'
 
@@ -73,10 +74,13 @@ export default async function CalendarPage() {
         </section>
 
         <section className="space-y-8">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
-            過去の投稿
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              過去の投稿
+            </h2>
+            <BulkDeletePublishedButton count={published.length} />
+          </div>
           <div className="space-y-4">
             {published.length === 0 ? (
               <div className="p-8 text-center border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
